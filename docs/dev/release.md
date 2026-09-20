@@ -1,20 +1,20 @@
-# Procedimiento de release — v0.2.0 (preparado, NO ejecutado)
+# Release procedure — v0.2.0 (prepared, NOT executed)
 
-Este procedimiento está documentado pero **no se ejecuta** en esta pasada. Solo
-debe ejecutarse cuando las fases de evaluación estén completas y `docs/dev/handoff.md`
-no deje preguntas abiertas.
+This procedure is documented but **not run** in this pass. It should only be run
+once the evaluation phases are complete and `docs/dev/handoff.md` leaves no open
+questions.
 
-## 0. Estado previo requerido
+## 0. Required prior state
 
-- `make eval` regenera `docs/metrics.md` desde `eval/results/*.json`; **ninguna
-  cifra del README proviene de otra fuente**.
-- El árbol está limpio (`git status --porcelain` vacío) y todos los JSON de
-  `eval/results/` llevan `code_revision` igual al commit que los generó y
-  `"dirty": false`.
-- El detector está congelado en el tag `eval-frozen-v1` (o posterior) y
-  `MEDDOCAN/test` se ejecutó exactamente una vez (ver `docs/dev/handoff.md`).
+- `make eval` regenerates `docs/metrics.md` from `eval/results/*.json`; **no
+  README figure comes from any other source**.
+- The tree is clean (`git status --porcelain` empty) and every JSON under
+  `eval/results/` carries `code_revision` equal to the commit that produced it
+  and `"dirty": false`.
+- The detector is frozen in tag `eval-frozen-v2` (or later) and `MEDDOCAN/test`
+  ran exactly once (see `docs/dev/handoff.md`).
 
-## 1. Checks previos al release
+## 1. Pre-release checks
 
 ```bash
 python -m pytest -q \
@@ -23,7 +23,7 @@ ruff check src tests eval
 pip-audit -r requirements.txt
 ```
 
-## 2. Tag y release
+## 2. Tag and release
 
 ```bash
 git checkout main
@@ -31,21 +31,21 @@ git tag -a v0.2.0 -m "Pukara v0.2.0"
 git push origin v0.2.0
 ```
 
-`pyproject.toml` lee la versión de `src.__version__` (fuente única), actualmente
-`0.2.0`.
+`pyproject.toml` reads the version from `src.__version__` (single source of
+truth), currently `0.2.0`.
 
 ## 3. Zenodo
 
-- El repositorio debe estar vinculado a un registro Zenodo (integración
-  GitHub ↔ Zenodo).
-- `CITATION.cff` y `.zenodo.json` llevan marcadores `TODO` para ORCIDs y el DOI
-  de SoftwareX; rellenarlos antes de archivar.
-- Crear un borrador de nueva versión en Zenodo para el tag `v0.2.0`, verificar
-  metadatos (autores, licencia MIT, versión 0.2.0) y publicar. El DOI se añade
-  a la tabla de metadatos del README (hoy "Pending").
+- The repository must be linked to a Zenodo record (GitHub ↔ Zenodo
+  integration).
+- `CITATION.cff` and `.zenodo.json` carry `TODO` markers for ORCIDs and the
+  SoftwareX DOI; fill them before archiving.
+- Draft a new version in Zenodo for tag `v0.2.0`, verify the metadata (authors,
+  MIT license, version 0.2.0) and publish. The DOI is then added to the README
+  metadata table (currently "Pending").
 
-## 4. Envío a SoftwareX
+## 4. SoftwareX submission
 
-- El DOI del paso 3 va a los metadatos del manuscrito SoftwareX.
-- `docs/dev/handoff.md` enumera qué afirmaciones del manuscrito quedan
-  respaldadas por qué `eval/results/*.json` (sección "Segunda pasada").
+- The DOI from step 3 goes into the SoftwareX manuscript metadata.
+- `docs/dev/handoff.md` lists which manuscript claims are backed by which
+  `eval/results/*.json` (section "Second pass").

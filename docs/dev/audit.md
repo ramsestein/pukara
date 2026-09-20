@@ -1,123 +1,123 @@
-# Pukara — Auditoría consolidada (segunda pasada)
+# Pukara — Consolidated audit (second pass)
 
-**Estado:** reescrito desde el estado actual del repositorio. No se restaura la
-versión borrada; se reconstruye con `git show 8754c1b:docs/dev/audit.md` solo
-como referencia.
-**Fecha:** 2026-09-19.
-**Commit auditado:** `cd095c7` (`Separar stack ML del cliente y auditar solo el
-núcleo con pip-audit`), rama `main`.
-**Alcance:** `src/`, `eval/`, `docs/`, `tests/`, `lista_blanca.txt`,
+**Status:** rewritten from the current repository state. The deleted version is
+not restored; it is rebuilt with `git show 8754c1b:docs/dev/audit.md` only as
+reference.
+**Date:** 2026-09-19.
+**Audited commit:** `cd095c7` (`Separate ML stack from client and audit only the
+core with pip-audit`), branch `main`.
+**Scope:** `src/`, `eval/`, `docs/`, `tests/`, `lista_blanca.txt`,
 `requirements*.txt`, `Makefile`.
 
-La auditoría original (fase 0, sobre `7ecaff2`) está integrada aquí como
-§1. Esta segunda pasada añade los hallazgos surgidos al leer el historial de
-resultados commit a commit y al revisar el detector y el arnés con disciplina
-de evaluación (§2).
+The original audit (phase 0, on `7ecaff2`) is integrated here as §1. This
+second pass adds the findings from reading the results history commit by commit
+and from reviewing the detector and harness with evaluation discipline (§2).
 
 ---
 
-## 1. Hallazgos originales: estado
+## 1. Original findings: status
 
-| ID | Hallazgo | Estado |
+| ID | Finding | Status |
 |---|---|---|
-| A1 | Fail-open de allowlist IP y credenciales | **Resuelto** `84ccf5e` (fase 2): arranque fail-closed + `STRICT=1`. |
-| A2 | Oráculo de errores distingue causas de fallo | **Resuelto** `606ccec` (fase 1): respuesta genérica única. |
-| A3 | Log de auditoría sin `req_id`, razón ni tamaño | **Resuelto** `84ccf5e`. |
-| A4 | Respuesta no ligada a la petición (sustitución) | **Resuelto** `606ccec`: AAD liga la respuesta al `req_id`. |
-| A5 | Lectura de respuesta upstream sin acotar | **Resuelto** `84ccf5e`: límite de cuerpo y timeouts. |
-| A6 | `verify_model_hash` fail-open | **Parcial.** El hash y la revisión están fijados en `eval/common.py` (`MODEL_META`); el cargador de `src/anonymizer.py` sigue devolviendo `True` si `BERT_MODEL_SHA256` no está definido. Documentado como riesgo residual en `docs/SECURITY.md`. |
-| A7 | Endpoint local con CORS abierto y sin autenticar | **Resuelto** `84ccf5e`: CORS restringido a orígenes locales. |
-| A8 | Forwarding de rutas arbitrarias en el endpoint local | **Resuelto** `84ccf5e`: rutas de gestión denegadas. |
-| A9 | Round-trip no garantizado para input adversarial | **Resuelto en esta pasada (Fase D):** `deanonymize` reescrito con restauración por regex tolerante y test de propiedad. |
-| A10 | Whitelist inconsistente entre BERT y regex | **Resuelto** `84ccf5e` (poda de términos dudosos); re-auditado en la Fase C de esta pasada. |
-| A11 | `family_relation` sobre-redacta palabras genéricas | **Mitigado en esta pasada (Fase C):** sobre-redacción medida y reducida. |
-| A12 | Deriva de versiones (README `0.1.0` vs `v1.0`) | **Resuelto** `86e1663`: versión única `0.2.0` desde `src.__version__`. |
-| A13 | Gaps de CI | **Resuelto** `86e1663` + `cd095c7`: matriz 3.9–3.12, `ruff`, cobertura ≥85 %, `pip-audit` sin `continue-on-error`. |
-| A14 | El mapa de placeholders no se reinicia por conversación | **Resuelto** (fase 5): mapa en memoria con reinicio por conversación. |
-| A15 | Secretos en `.env` plano en el cliente | **Documentado** en `docs/threat-model.md` (límite secret-at-rest del cliente). |
-| C1–C8 | Decisiones de modelo, corpus y configuración | **Resueltas** (bloque "Resolved" de la auditoría original): repo `BSC-NLP4BIA/bsc-bio-ehr-es-carmen-anon`, revisión `83db1112c37c7ef527a9ba6d6b4d1be18b4bca9b`; corpora en `data/` (nunca subidos); CARMEN-I degradado por solape de entrenamiento. |
+| A1 | Fail-open IP allowlist and credentials | **Resolved** `84ccf5e` (phase 2): fail-closed startup + `STRICT=1`. |
+| A2 | Error oracle distinguishes failure causes | **Resolved** `606ccec` (phase 1): single generic response. |
+| A3 | Audit log lacks `req_id`, reason and size | **Resolved** `84ccf5e`. |
+| A4 | Response not bound to request (substitution) | **Resolved** `606ccec`: AAD binds the response to `req_id`. |
+| A5 | Unbounded upstream response read | **Resolved** `84ccf5e`: body limit and timeouts. |
+| A6 | `verify_model_hash` fail-open | **Partial.** Hash and revision are pinned in `eval/common.py` (`MODEL_META`); the loader in `src/anonymizer.py` still returns `True` when `BERT_MODEL_SHA256` is unset. Documented as residual risk in `docs/SECURITY.md`. |
+| A7 | Local endpoint with open CORS and no auth | **Resolved** `84ccf5e`: CORS restricted to local origins. |
+| A8 | Arbitrary path forwarding on the local endpoint | **Resolved** `84ccf5e`: management routes denied. |
+| A9 | Round-trip not guaranteed for adversarial input | **Resolved this pass (Phase D):** `deanonymize` rewritten with tolerant regex restoration and a property test. |
+| A10 | Whitelist inconsistent between BERT and regex | **Resolved** `84ccf5e` (pruning of doubtful terms); re-audited in Phase C of this pass. |
+| A11 | `family_relation` over-redacts generic words | **Mitigated this pass (Phase C):** over-redaction measured and reduced. |
+| A12 | Version drift (README `0.1.0` vs `v1.0`) | **Resolved** `86e1663`: single version `0.2.0` from `src.__version__`. |
+| A13 | CI gaps | **Resolved** `86e1663` + `cd095c7`: matrix 3.9–3.12, `ruff`, coverage ≥85 %, `pip-audit` without `continue-on-error`. |
+| A14 | Placeholder map not reset per conversation | **Resolved** (phase 5): in-memory map with per-conversation reset. |
+| A15 | Secrets in plaintext `.env` on the client | **Documented** in `docs/threat-model.md` (client secret-at-rest boundary). |
+| C1–C8 | Model, corpus and config decisions | **Resolved** (original audit "Resolved" block): repo `BSC-NLP4BIA/bsc-bio-ehr-es-carmen-anon`, revision `83db1112c37c7ef527a9ba6d6b4d1be18b4bca9b`; corpora under `data/` (never pushed); CARMEN-I demoted due to train overlap. |
 
 ---
 
-## 2. Hallazgos nuevos de esta pasada
+## 2. New findings from this pass
 
-### N1. El historial de leakage contiene lecturas espurias (lectura commit a commit)
+### N1. The leakage history contains spurious readings (commit-by-commit reading)
 
-El historial de `eval/results/meddocan.json` (leakage 100 % → 70 % → 18,2 % →
-28,4 %) no es una secuencia de ajustes. Leído commit a commit:
+The history of `eval/results/meddocan.json` (leakage 100 % → 70 % → 18.2 % →
+28.4 %) is not a sequence of tuning. Read commit by commit:
 
-- `f9553d3` → `30fb7e2`: la primera ejecución **no procesaba las regex** (bug
-  del arnés); se corrigió. **No es un ajuste del detector.**
-- `8754c1b`: las reglas EMAIL/URL **no se ejecutaban** (bug preexistente,
-  detectado sin mirar `dev` ni `test`); se corrigió. **No es un ajuste.** En el
-  mismo commit se **estrechó la definición de leakage de 7 a 4 clases**
+- `f9553d3` → `30fb7e2`: the first run **did not process the regexes** (harness
+  bug); fixed. **Not a detector change.**
+- `8754c1b`: the EMAIL/URL rules **were not running** (preexisting bug, found
+  without looking at `dev` or `test`); fixed. **Not a detector change.** In the
+  same commit the leakage definition was **narrowed from 7 to 4 classes**
   (`EMAIL, FAMILY, NAME, ID, PHONE, URL, PROFESSIONAL` → `EMAIL, NAME, PHONE,
-  ID`). Esto **sí** ocurrió con resultados a la vista; se neutraliza reportando
-  **siempre ambas definiciones** (ver `eval/PROTOCOL.md`).
-- `4f0a3d6`: fusión de `NOMBRE_PERSONAL_SANITARIO` y
-  `NOMBRE_SUJETO_ASISTENCIA` (y `DOCTOR`) en `NAME`. Es una decisión de
-  taxonomía razonable (para seudonimizar, cualquier nombre de persona recibe el
-  mismo tratamiento), pero se commiteó **con resultados a la vista**; queda
-  justificada por escrito en `eval/PROTOCOL.md` **antes** de la ejecución final.
+  ID`). This **was** done with results in view; it is neutralized by always
+  reporting **both definitions** (see `eval/PROTOCOL.md`).
+- `4f0a3d6`: merge of `NOMBRE_PERSONAL_SANITARIO` and
+  `NOMBRE_SUJETO_ASISTENCIA` (and `DOCTOR`) into `NAME`. It is a reasonable
+  taxonomy decision (for pseudonymisation any person name gets the same
+  treatment), but it was committed **with results in view**; it is justified in
+  writing in `eval/PROTOCOL.md` **before** the final run.
 
-Lección: ningún cambio de definición de métrica puede hacerse con resultados a
-la vista. El protocolo de evaluación (`eval/PROTOCOL.md`) congela definiciones
-y particiones antes de medir.
+Lesson: no metric-definition change may be made with results in view. The
+evaluation protocol (`eval/PROTOCOL.md`) freezes definitions and splits before
+measuring.
 
-### N2. `code_revision` incoherente con el código que produjo los JSON
+### N2. `code_revision` inconsistent with the code that produced the JSONs
 
-`eval/results/meddocan.json` declara `code_revision: 8754c1b9…`, pero fue
-generado por un código posterior. Ningún JSON de resultados permite reconstruir
-qué código lo produjo. Regla nueva (en `eval/PROTOCOL.md`): cada JSON lleva
-`code_revision` = `git rev-parse HEAD` **en el momento de ejecutar**, y un test
-marca `"dirty": true` si el árbol no estaba limpio (`git status --porcelain`).
+`eval/results/meddocan.json` declares `code_revision: 8754c1b9…`, but it was
+produced by later code. No results JSON allows reconstructing which code
+produced it. New rule (in `eval/PROTOCOL.md`): every JSON carries
+`code_revision` = `git rev-parse HEAD` **at execution time**, and a test marks
+`"dirty": true` if the tree was not clean (`git status --porcelain`).
 
-### N3. Confusión ID/PHONE en el detector
+### N3. ID/PHONE confusion in the detector
 
-En `dev`, la clase ID tiene F1 ≈ 0 con soporte alto (1499) y PHONE tiene
-precisión ≈ 2 % con recall alto. La regex de teléfono
-(`\b(?:(?:\+|00)\d{1,3}[\s.-]?)?[3456789](?:[\s.-]?\d){8}\b`) absorbe
-identificadores (NHC, DNI, CIP, nº de colegiado) que empiezan por dígito y
-tienen ≥ 9 cifras. Confirmado por la matriz de confusión gold→pred en la Fase C
-(`docs/dev/eval-diagnosis.md`). Corrección en la Fase C: regex de teléfono
-acotada a formatos telefónicos y regex de identificadores con formatos concretos
-(DNI/NIE con letra válida, NHC, CIP, SS), con prioridad de la más específica en
-el dedup por solape.
+On `dev`, the ID class has F1 ≈ 0 with high support (1499) and PHONE has
+precision ≈ 2 % with high recall. The phone regex
+(`\b(?:(?:\+|00)\d{1,3}[\s.-]?)?[3456789](?:[\s.-]?\d){8}\b`) absorbs
+identifiers (NHC, DNI, CIP, licence number) that start with a digit and have ≥ 9
+digits. Confirmed by the gold→pred confusion matrix in Phase C
+(`docs/dev/eval-diagnosis.md`). Fixed in Phase C: phone regex bounded to phone
+formats and identifier regexes with concrete formats (DNI/NIE with valid letter,
+NHC, CIP, SS), with the most specific rule winning the overlap dedup.
 
-### N4. Restauración de placeholders frágil
+### N4. Fragile placeholder restoration
 
-`deanonymize` usaba `str.replace` exacto y la tabla de robustez de
-`eval/results/utility.json` estaba al 0 % en todas las perturbaciones. Corregido
-en la Fase D con restauración por regex insensible a mayúsculas y tolerante a
-perturbaciones, más un test de propiedad (Hypothesis).
+`deanonymize` used exact `str.replace` and the robustness table in
+`eval/results/utility.json` was at 0 % for every perturbation. Fixed in Phase D
+with case-insensitive, perturbation-tolerant regex restoration plus a property
+test (Hypothesis).
 
-### N5. Exclusión injustificada de Presidio como baseline
+### N5. Unjustified exclusion of Presidio as baseline
 
-La primera pasada excluyó Microsoft Presidio argumentando que "no está alineado
-con las guías de MEDDOCAN y rindió mal en CARMEN-I". Ninguna de las dos razones
-es válida: un baseline que rinde mal sigue siendo el baseline; la desalineación
-de taxonomía se resuelve mapeando al conjunto unificado; y neutralización y
-leakage no dependen de la etiqueta. Reintroducido en la Fase F2
-(`eval/results/presidio_meddocan.json`).
+The first pass excluded Microsoft Presidio arguing it was "not aligned with the
+MEDDOCAN guidelines and performed poorly on CARMEN-I". Neither reason holds: a
+poor baseline is still the baseline; taxonomy misalignment is solved by mapping
+to the unified set; and neutralization and leakage do not depend on the label.
+The standalone Presidio baseline is referenced from `ramsestein/presidio_carmen`
+(not re-run here); Presidio is also available as an optional detector component
+(`PUKARA_ENABLE_PRESIDIO=1`).
 
-### N6. `docs/dev/` borrado
+### N6. `docs/dev/` deleted
 
-La carpeta `docs/dev/` se eliminó tras la primera pasada. Esta pasada la
-reescribe desde el estado actual (no la restaura): los enlaces de `README.md`,
-`docs/SECURITY.md`, `docs/threat-model.md`, `eval/README.md`, `src/secure.py` y
-`eval/common.py` vuelven a resolver (verificado con `grep -rn "docs/dev"`).
+The `docs/dev/` folder was deleted after the first pass. This pass rewrites it
+from the current state (does not restore it): the links from `README.md`,
+`docs/SECURITY.md`, `docs/threat-model.md`, `eval/README.md`, `src/secure.py`
+and `eval/common.py` resolve again (verified with `grep -rn "docs/dev"`).
 
 ---
 
-## 3. Estado consolidado por componente
+## 3. Consolidated status by component
 
-- **Protocolo v2** (`src/secure.py`): PSK + HKDF-SHA256, claves separadas por
-  dirección, AAD canónico, frescura contra reloj del servidor, anti-replay
-  fail-closed, respuesta ligada al `req_id`. ADR: `docs/dev/adr-001-protocol.md`.
-- **Proxy** (`src/proxy.py`): allowlist `(método, ruta)`, límite de cuerpo,
-  timeouts, caches acotados, arranque fail-closed, log con `req_id`/razón/tamaño.
-- **Detector** (`src/anonymizer.py`): BERT + regex con taxonomía unificada;
-  corregido en la Fase C y congelado en el tag `eval-frozen-v1`.
-- **Restauración** (`deanonymize`): reescrita en la Fase D.
-- **Evaluación** (`eval/`): protocolo congelado en `eval/PROTOCOL.md`; resultados
-  versionados en `eval/results/*.json`.
+- **Protocol v2** (`src/secure.py`): PSK + HKDF-SHA256, direction-separated
+  keys, canonical AAD, server-clock freshness, fail-closed anti-replay, response
+  bound to `req_id`. ADR: `docs/dev/adr-001-protocol.md`.
+- **Proxy** (`src/proxy.py`): `(method, path)` allowlist, body limit, timeouts,
+  bounded caches, fail-closed startup, log with `req_id`/reason/size.
+- **Detector** (`src/anonymizer.py`): BERT + regex with unified taxonomy;
+  fixed in Phase C and frozen in tag `eval-frozen-v2` (Phase D touched
+  `src/anonymizer.py`, superseding `eval-frozen-v1`).
+- **Restoration** (`deanonymize`): rewritten in Phase D.
+- **Evaluation** (`eval/`): protocol frozen in `eval/PROTOCOL.md`; results
+  versioned under `eval/results/*.json`.

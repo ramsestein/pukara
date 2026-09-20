@@ -1,10 +1,10 @@
 # Handoff
 
-## Primera pasada (resumen histórico)
+## First pass (historical summary)
 
-Branches por fase, todas con tests en verde:
+Branches per phase, all with green tests:
 
-| Fase | Rama | Head |
+| Phase | Branch | Head |
 |---|---|---|
 | 0 | `main` | `53c3aea` |
 | 1 | `fase1-protocolo-v2` | `606ccec` |
@@ -13,20 +13,19 @@ Branches por fase, todas con tests en verde:
 | 4 | `fase4-evaluacion` | `f9553d3` |
 | 5 | `fase5-empaquetado` | `8d33dd9` |
 
-Qué se hizo: protocol v2, endurecimiento del proxy, poda de whitelist, modelo de
-amenazas, arnés de evaluación (`eval/`) y empaquetado SoftwareX. Detalles en
+What was done: protocol v2, proxy hardening, whitelist pruning, threat model,
+evaluation harness (`eval/`) and SoftwareX packaging. Details in
 `docs/dev/audit.md`.
 
-## Segunda pasada
+## Second pass
 
-Rellenado en la **Fase H** de la segunda pasada. Contiene:
+Filled in at **Phase H** of the second pass. It contains:
 
-- Qué se cambió en el detector y con qué evidencia de `dev`.
-- Comparación antes/después en `dev` y en `test`, distinguiendo qué parte del
-  cambio proviene de bugs del arnés corregidos y qué parte de cambios del
-  detector.
-- Qué frases del manuscrito quedan respaldadas por qué JSON, y qué frases ya no
-  se pueden sostener.
-- Trabajo futuro priorizado por impacto en leakage.
-- Confirmación explícita de que `MEDDOCAN/test` se ejecutó una sola vez, con el
-  hash y la fecha.
+- What changed in the detector and with what `dev` evidence.
+- Before/after comparison on `dev` and `test`, distinguishing what part of the
+  change comes from fixed harness bugs and what part from detector changes.
+- Which manuscript claims are backed by which JSON, and which claims can no
+  longer be sustained.
+- Future work prioritized by leakage impact.
+- Explicit confirmation that `MEDDOCAN/test` ran exactly once, with hash and
+  date.

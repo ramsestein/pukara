@@ -164,26 +164,24 @@ caso de uso de Pukara asume texto ya pseudoanonimizado (nombres/edad del
 paciente retirados), la mejora marginal de leakage no compensa la bajada de F1.
 Por tanto:
 
-- **Configuración congelada en `eval-frozen-v1`:** BERT + regex, Presidio **off**
+- **Configuración congelada en `eval-frozen-v2`:** BERT + regex, Presidio **off**
   por defecto.
 - **Presidio se mantiene como extra accionable** para las entidades clave
-  (nombre, email, país) y como **baseline standalone** (Fase F2). Ambas cifras
-  se reportan.
+  (nombre, email, país).
 
-**Baseline standalone (Fase F2).** Presidio completo se mantiene como baseline
-independiente, con **todas** sus entidades mapeadas al conjunto unificado
-(implementado en `src/presidio.py` y `eval/common.py`):
-
-| Entidad Presidio | Unificado (baseline) |
-|---|---|
-| `PERSON` | `NAME` |
-| `LOCATION` | `LOCATION` |
-| `ORG` | `ORGANIZATION` |
-| `DATE_TIME` | `DATE` |
-| `PHONE_NUMBER` | `PHONE` |
-| `EMAIL_ADDRESS` | `EMAIL` |
-| `URL` | `URL` |
-| `IBAN_CODE`, `CREDIT_CARD`, `NRP`, identificadores numéricos | `ID` |
+**Baseline standalone (Fase F2).** El baseline Presidio standalone **no se
+re-ejecuta**: se referencia el repositorio existente `ramsestein/presidio_carmen`
+(spaCy `es_core_news_lg` + reconocedores por defecto y personalizados de ese
+repo) y se citan sus cifras. La integración opcional en el pipeline usa solo
+`PERSON`/`EMAIL_ADDRESS`/`LOCATION` (tabla de arriba); el mapeo completo al
+conjunto unificado para referencias externas está en `src/presidio.py`
+(`PRESIDIO_TO_UNIFIED`).
 
 Neutralización y leakage de Presidio (integración y baseline) se calculan **sin
 depender de la etiqueta**, con el mismo evaluador que Pukara.
+
+## 7. Fases descartadas
+
+- **Fase E (retención de conceptos clínicos, DisTEMIST/PharmaCoNER): descartada.**
+  No bloquea el release. Si se retoma, verificar antes que ninguno de los dos
+  corpus formó parte del entrenamiento del modelo CARMEN.

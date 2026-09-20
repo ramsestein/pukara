@@ -1,52 +1,52 @@
-# Auditoría de contaminación de evaluación
+# Evaluation contamination audit
 
-**Fecha:** 2026-09-19. **Estado:** reescrito desde el estado actual.
+**Date:** 2026-09-19. **Status:** rewritten from the current state.
 
-Este documento fija qué corpus es válido para qué afirmación. Ningún resultado
-de `docs/` puede sostenerse si no pasa esta auditoría.
+This document fixes which corpus is valid for which claim. No result in
+`docs/` may stand unless it passes this audit.
 
-## 1. CARMEN-I: retirado como métrica principal (solape de entrenamiento)
+## 1. CARMEN-I: retired as a headline metric (train overlap)
 
-- La model card
+- The model card
   ([`BSC-NLP4BIA/bsc-bio-ehr-es-carmen-anon`](https://huggingface.co/BSC-NLP4BIA/bsc-bio-ehr-es-carmen-anon))
-  declara que el modelo se entrenó sobre la parte de anonimización de CARMEN-I y
-  **no** publica una partición train/test.
-- La página del corpus (PhysioNet, 10.13026/x7ed-9r91) describe CARMEN-I como un
-  recurso único de **2.000 documentos** sin partición oficial publicada.
-- La cifra anterior ("CARMEN test, 2.000 documentos") evalúa sobre el corpus
-  completo, que es también sobre lo que se ajustó el modelo.
+  states the model was trained on the anonymization part of CARMEN-I and does
+  **not** publish a train/test split.
+- The corpus page (PhysioNet, 10.13026/x7ed-9r91) describes CARMEN-I as a single
+  resource of **2,000 documents** with no official published split.
+- The previous figure ("CARMEN test, 2,000 documents") evaluates on the whole
+  corpus, which is also what the model was fine-tuned on.
 
-**Conclusión:** la partición usada para el ajuste fino no puede determinarse. La
-cifra de CARMEN-I es *in-distribution, cota superior, posible solape con
-entrenamiento* y **no** se usa como resultado principal. En la Fase F2 se
-ejecuta de nuevo como **tabla secundaria** (continuidad con cifras publicadas y
-para mostrar el tamaño de la caída in-distribution → fuera de distribución), con
-la nota de solape **dentro de la tabla**, no en pie de página.
+**Conclusion:** the split used for fine-tuning cannot be determined. The
+CARMEN-I figure is *in-distribution, upper bound, possible train overlap* and is
+**not** used as a headline result. It is kept as a **secondary table**
+(continuity with previously published figures and to show the size of the
+in-distribution → out-of-distribution drop), with the overlap note **inside the
+table**, not in a footnote.
 
-## 2. MEDDOCAN: limpio de entrenamiento, con `train` quemado por derivación de regex
+## 2. MEDDOCAN: clean of training data, with `train` burned by regex derivation
 
-- El modelo se entrenó solo sobre CARMEN-I. MEDDOCAN (Marimon et al., IberLEF
-  2019) **no** formó parte del entrenamiento del modelo.
-- Datos locales `data/meddocan/corpus/`: `train` (500), `dev` (250), `test`
-  (250) documentos en formato brat.
-- **`train` está quemado**: de ahí se derivaron las regex en la primera pasada.
-  No es reportable.
-- **`dev`** = desarrollo y ablaciones. **`test`** = única partición reportada,
-  una sola ejecución final.
+- The model was trained on CARMEN-I only. MEDDOCAN (Marimon et al., IberLEF
+  2019) was **not** part of the model's training.
+- Local data `data/meddocan/corpus/`: `train` (500), `dev` (250), `test` (250)
+  documents in brat format.
+- **`train` is burned**: the regexes were derived from it in the first pass. It
+  is not reportable.
+- **`dev`** = development and ablations. **`test`** = the only reported split,
+  a single final run.
 
-## 3. DisTEMIST y PharmaCoNER (Fase E): fuera de entrenamiento
+## 3. DisTEMIST and PharmaCoNER (Phase E): discarded
 
-Verificado en la Fase E antes de medir: ninguno de los dos corpus forma parte
-del entrenamiento del modelo CARMEN (que se entrenó solo con la parte de
-anonimización de CARMEN-I). Se citan sus fuentes primarias en
-`eval/concepts.py`.
+Phase E (clinical-concept retention over DisTEMIST and PharmaCoNER) was
+**discarded** by decision; it does not block the release. If revived later, it
+must first verify that neither corpus was part of the CARMEN model training
+(which used only the CARMEN-I anonymization part).
 
-## 4. Reglas operativas
+## 4. Operational rules
 
-1. CARMEN-I nunca es resultado principal; si aparece, va etiquetado
-   "in-distribution, cota superior, posible solape con entrenamiento".
-2. `train` de MEDDOCAN no se reporta jamás.
-3. `test` de MEDDOCAN se ejecuta **una sola vez**, al final, con el código
-   congelado por commit (`eval-frozen-v1`).
-4. Toda cifra de `docs/` proviene de `eval/results/*.json` generado por
-   `make eval`; no se editan cifras a mano.
+1. CARMEN-I is never a headline result; if it appears, it is labelled
+   "in-distribution, upper bound, possible train overlap".
+2. MEDDOCAN `train` is never reported.
+3. MEDDOCAN `test` runs **once**, at the end, with the code frozen by commit
+   (`eval-frozen-v2`).
+4. Every figure in `docs/` comes from `eval/results/*.json` generated by
+   `make eval`; figures are never hand-edited.
