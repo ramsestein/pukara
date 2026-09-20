@@ -1,0 +1,194 @@
+{
+  "script": "eval/over_redaction.py",
+  "generated": "2026-09-20T08:28:06.265066Z",
+  "code_revision": "be0e1d0726cf81646f9add5fe1dd15efb7b7cdab",
+  "dirty": false,
+  "mode": "combined",
+  "split": "dev",
+  "documents": 250,
+  "seed": 42,
+  "bootstrap": 1000,
+  "over_redaction": {
+    "over_redacted_tokens": 1642,
+    "non_gold_tokens": 99268,
+    "rate": 0.0165,
+    "ci95": [
+      0.0167,
+      0.0191
+    ]
+  },
+  "notes": [
+    "Over-redaction: non-PHI tokens (no overlap with any gold span) that fall inside a predicted span.",
+    "Global rate with per-document bootstrap CI (95%, seed 42, 1000 resamples).",
+    "The per-component breakdown and top false positives are computed on dev because the frozen test predictions carry no provenance; dev is diagnostic, not reportable."
+  ],
+  "breakdown": {
+    "over_redacted_tokens": 1642,
+    "by_source": {
+      "regex:NAME": 623,
+      "bert": 495,
+      "regex:ID": 241,
+      "regex:AGE": 169,
+      "regex:DATE": 27,
+      "bert+regex": 26,
+      "regex:OTHER": 16,
+      "regex:LOCATION": 15,
+      "regex:FAMILY": 12,
+      "regex:HOSPITAL": 9,
+      "regex:TIME": 9
+    },
+    "note": "Diagnostic only, computed on dev (not reportable)."
+  },
+  "top_false_positives": [
+    {
+      "text": "país",
+      "count": 99,
+      "source": "bert"
+    },
+    {
+      "text": "nas",
+      "count": 87,
+      "source": "bert"
+    },
+    {
+      "text": "cp",
+      "count": 79,
+      "source": "bert"
+    },
+    {
+      "text": "historia actual",
+      "count": 66,
+      "source": "regex:NAME"
+    },
+    {
+      "text": "provincia",
+      "count": 65,
+      "source": "bert"
+    },
+    {
+      "text": "col",
+      "count": 51,
+      "source": "bert"
+    },
+    {
+      "text": "familia",
+      "count": 12,
+      "source": "regex:FAMILY"
+    },
+    {
+      "text": "medicina interna",
+      "count": 9,
+      "source": "regex:NAME"
+    },
+    {
+      "text": "3 años",
+      "count": 8,
+      "source": "regex:AGE"
+    },
+    {
+      "text": "2 años",
+      "count": 7,
+      "source": "regex:AGE"
+    },
+    {
+      "text": "5 años",
+      "count": 7,
+      "source": "regex:AGE"
+    },
+    {
+      "text": "cirugía plástica",
+      "count": 7,
+      "source": "regex:NAME"
+    },
+    {
+      "text": "20 años",
+      "count": 6,
+      "source": "regex:AGE"
+    },
+    {
+      "text": "dr",
+      "count": 6,
+      "source": "regex:NAME"
+    },
+    {
+      "text": "10 años",
+      "count": 6,
+      "source": "regex:AGE"
+    },
+    {
+      "text": "aparato digestivo",
+      "count": 6,
+      "source": "regex:NAME"
+    },
+    {
+      "text": "trombosis",
+      "count": 6,
+      "source": "regex:NAME"
+    },
+    {
+      "text": "4 años",
+      "count": 5,
+      "source": "regex:AGE"
+    },
+    {
+      "text": "ºcol",
+      "count": 5,
+      "source": "bert"
+    },
+    {
+      "text": "10/10",
+      "count": 4,
+      "source": "regex:DATE"
+    },
+    {
+      "text": "oncología médica",
+      "count": 4,
+      "source": "regex:NAME"
+    },
+    {
+      "text": "el servicio",
+      "count": 4,
+      "source": "regex:NAME"
+    },
+    {
+      "text": "6 años",
+      "count": 4,
+      "source": "regex:AGE"
+    },
+    {
+      "text": "1 año",
+      "count": 4,
+      "source": "regex:AGE"
+    },
+    {
+      "text": "iii/iv",
+      "count": 3,
+      "source": "regex:NAME"
+    },
+    {
+      "text": "budd-chiari",
+      "count": 3,
+      "source": "regex:NAME"
+    },
+    {
+      "text": "30 años",
+      "count": 3,
+      "source": "regex:AGE"
+    },
+    {
+      "text": "datos asistenciales",
+      "count": 3,
+      "source": "bert"
+    },
+    {
+      "text": "cuidados intensivos",
+      "count": 3,
+      "source": "regex:NAME"
+    },
+    {
+      "text": "cirugía general",
+      "count": 3,
+      "source": "regex:NAME"
+    }
+  ]
+}
