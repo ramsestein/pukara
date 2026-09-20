@@ -51,12 +51,14 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="MEDDOCAN intrinsic evaluation")
     parser.add_argument("--corpus", default="data/meddocan/corpus")
     parser.add_argument("--split", default="dev,test")
-    parser.add_argument("--mode", choices=["regex", "bert", "combined"],
+    parser.add_argument("--mode", choices=["regex", "bert", "combined", "presidio"],
                         default="combined")
     parser.add_argument("--model-dir", default=None)
     parser.add_argument("--out", default="eval/results/meddocan.json")
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--bootstrap", type=int, default=1000)
+    parser.add_argument("--presidio", action="store_true",
+                        help="Activar Presidio en modo combined (extra opcional)")
     args = parser.parse_args()
 
     corpus = Path(args.corpus)
@@ -73,12 +75,24 @@ def main() -> int:
             print(f"[eval] El modelo BERT no está disponible en {model_dir}.",
                   file=sys.stderr)
             return 2
-    predictor = common.Predictor(args.mode, args.model_dir)
+    if args.mode == "presidio":
+        from src import presidio
+        if not presidio.available():
+            print("[eval] Presidio no está disponible (spaCy es_core_news_lg).",
+                  file=sys.stderr)
+            return 2
+    predictor = common.Predictor(args.mode, args.model_dir,
+                                 use_presidio=args.presidio)
 
     per_doc = []
     per_doc_relaxed = []
-    leak_count = 0
+    leak_wide_count = 0
+    leak_direct_count = 0
     leak_any_count = 0
+    per_doc_leak_wide = []
+    per_doc_leak_direct = []
+    per_doc_leak_any = []
+    per_doc_neutr = []
     covered_spans = 0
     total_gold_spans = 0
     # Aggregated counts.
@@ -131,13 +145,19 @@ def main() -> int:
             c[1] += len(p) - len(matched)
             c[2] += len(g) - tp
 
+        if common.document_leakage_wide(gold, pred):
+            leak_wide_count += 1
         if common.document_leakage(gold, pred):
-            leak_count += 1
+            leak_direct_count += 1
         if common.document_leakage_any(gold, pred):
             leak_any_count += 1
+        per_doc_leak_wide.append(1 if common.document_leakage_wide(gold, pred) else 0)
+        per_doc_leak_direct.append(1 if common.document_leakage(gold, pred) else 0)
+        per_doc_leak_any.append(1 if common.document_leakage_any(gold, pred) else 0)
         cov, tot = common.span_coverage(gold, pred)
         covered_spans += cov
         total_gold_spans += tot
+        per_doc_neutr.append(cov / tot if tot else 0.0)
 
         # Per-doc F1 values for bootstrap CIs.
         per_doc.append(_f1(wtp, wfp, wfn))
@@ -159,13 +179,18 @@ def main() -> int:
 
     word_ci = common.bootstrap_ci(per_doc, n=args.bootstrap, seed=args.seed)
     relaxed_ci = common.bootstrap_ci(per_doc_relaxed, n=args.bootstrap, seed=args.seed)
+    neutr_ci = common.bootstrap_ci(per_doc_neutr, n=args.bootstrap, seed=args.seed)
+    wide_ci = common.bootstrap_ci(per_doc_leak_wide, n=args.bootstrap, seed=args.seed)
+    direct_ci = common.bootstrap_ci(per_doc_leak_direct, n=args.bootstrap, seed=args.seed)
+    any_ci = common.bootstrap_ci(per_doc_leak_any, n=args.bootstrap, seed=args.seed)
 
     result = {
         "script": "eval/meddocan.py",
         "generated": datetime.datetime.utcnow().isoformat() + "Z",
         "code_revision": git_revision(),
         "mode": args.mode,
-        "model": common.MODEL_META if args.mode != "regex" else None,
+        "presidio": (args.mode == "combined" and args.presidio),
+        "model": common.MODEL_META if args.mode in ("bert", "combined") else None,
         "seed": args.seed,
         "splits": splits,
         "documents": len(docs),
@@ -192,22 +217,33 @@ def main() -> int:
             "total_spans": total_gold_spans,
             "rate": round(covered_spans / total_gold_spans, 4)
             if total_gold_spans else 0.0,
+            "ci95": [round(x, 4) for x in neutr_ci],
         },
         "leakage": {
-            "direct_identifiers": {
-                "leaked_docs": leak_count,
+            "wide": {
+                "leaked_docs": leak_wide_count,
                 "total_docs": len(docs),
-                "rate": round(leak_count / len(docs), 4),
+                "rate": round(leak_wide_count / len(docs), 4) if len(docs) else 0.0,
+                "ci95": [round(x, 4) for x in wide_ci],
+            },
+            "direct": {
+                "leaked_docs": leak_direct_count,
+                "total_docs": len(docs),
+                "rate": round(leak_direct_count / len(docs), 4) if len(docs) else 0.0,
+                "ci95": [round(x, 4) for x in direct_ci],
             },
             "any_phi": {
                 "leaked_docs": leak_any_count,
                 "total_docs": len(docs),
-                "rate": round(leak_any_count / len(docs), 4),
+                "rate": round(leak_any_count / len(docs), 4) if len(docs) else 0.0,
+                "ci95": [round(x, 4) for x in any_ci],
             },
         },
         "notes": [
             "Gold and predictions are unified-label PHI spans.",
-            "Direct identifiers for leakage: EMAIL, NAME, PHONE, ID (only these).",
+            "Leakage wide (principal): EMAIL, FAMILY, NAME, ID, PHONE, URL, PROFESSIONAL.",
+            "Leakage direct: EMAIL, NAME, PHONE, ID.",
+            "Leakage any_phi: any gold PHI span missed (label-agnostic).",
         ],
     }
 

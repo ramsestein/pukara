@@ -140,24 +140,50 @@ concepto. IC bootstrap, semilla fija.
 - Ninguna cifra se escribe a mano en `docs/metrics.md`: se genera con
   `make eval` desde `eval/results/*.json`.
 
-## 6. Mapeo de Presidio (Fase F2) — escrito antes de ejecutar
+## 6. Integración de Presidio y baseline (escrito antes de ejecutar)
 
-Las entidades de Microsoft Presidio (spaCy `es_core_news_lg` + reconocedores por
-defecto + reconocedores personalizados de `ramsestein/presidio_carmen`) se
-mapean a la taxonomía unificada de la siguiente forma (implementado en
-`eval/common.py`, confirmado contra el repo clonado antes de ejecutar):
+**Integración en el detector (cambio de arquitectura de la Fase C).** El
+detector puede ejecutarse con un tercer componente, **Presidio**, activable con
+`PUKARA_ENABLE_PRESIDIO=1` (desactivado por defecto). Presidio contribuye solo
+con tres clases del conjunto unificado, y **solo rellena huecos**: sus spans se
+añaden únicamente si no solapan con lo ya detectado por BERT+regex (en solape
+ganan BERT+regex).
 
-| Entidad Presidio | Unificado |
+| Entidad Presidio | Unificado (integración) |
 |---|---|
 | `PERSON` | `NAME` |
-| `LOC`, `GPE` | `LOCATION` |
+| `EMAIL_ADDRESS` | `EMAIL` |
+| `LOCATION` | `LOCATION` (países y ciudades; spaCy no distingue) |
+
+**Decisión de configuración (aplicando §4).** Con los datos de ablación en
+`dev`, el criterio (§4, F1 relajado con leakage amplio de desempate) elige
+**BERT + regex sin Presidio**: F1 relajado 0,7997 (frente a 0,7478 con
+Presidio), word F1 0,8548 (frente a 0,8198), leakage amplio 0,104 (frente a
+0,084). Presidio baja la F1 por sobre-redacción de `es_core_news_lg`. Como el
+caso de uso de Pukara asume texto ya pseudoanonimizado (nombres/edad del
+paciente retirados), la mejora marginal de leakage no compensa la bajada de F1.
+Por tanto:
+
+- **Configuración congelada en `eval-frozen-v1`:** BERT + regex, Presidio **off**
+  por defecto.
+- **Presidio se mantiene como extra accionable** para las entidades clave
+  (nombre, email, país) y como **baseline standalone** (Fase F2). Ambas cifras
+  se reportan.
+
+**Baseline standalone (Fase F2).** Presidio completo se mantiene como baseline
+independiente, con **todas** sus entidades mapeadas al conjunto unificado
+(implementado en `src/presidio.py` y `eval/common.py`):
+
+| Entidad Presidio | Unificado (baseline) |
+|---|---|
+| `PERSON` | `NAME` |
+| `LOCATION` | `LOCATION` |
 | `ORG` | `ORGANIZATION` |
 | `DATE_TIME` | `DATE` |
 | `PHONE_NUMBER` | `PHONE` |
 | `EMAIL_ADDRESS` | `EMAIL` |
 | `URL` | `URL` |
-| `IBAN_CODE`, `CREDIT_CARD`, identificadores numéricos | `ID` |
-| reconocedores personalizados de `presidio_carmen` | según su tipo (se documenta) |
+| `IBAN_CODE`, `CREDIT_CARD`, `NRP`, identificadores numéricos | `ID` |
 
-Neutralización y leakage de Presidio se calculan **sin depender de la etiqueta**,
-con el mismo evaluador que Pukara.
+Neutralización y leakage de Presidio (integración y baseline) se calculan **sin
+depender de la etiqueta**, con el mismo evaluador que Pukara.

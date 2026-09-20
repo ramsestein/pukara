@@ -164,7 +164,13 @@ PATTERNS = {
         re.IGNORECASE,
     ),
     "time": re.compile(r"\b\d{1,2}:\d{2}(?::\d{2})?\s*h?\b", re.IGNORECASE),
-    "phone": re.compile(r"\b(?:(?:\+|00)\d{1,3}[\s.-]?)?[3456789](?:[\s.-]?\d){8}\b"),
+    # Teléfono acotado a formatos españoles/internacionales: 9 dígitos que
+    # empiezan por 6/8/9, con código de país +34/0034 opcional y separadores
+    # opcionales. Así no absorbe identificadores ("28 28 20943", "50 50 98653")
+    # ni DNI/NHC que empiezan por otras cifras.
+    "phone": re.compile(
+        r"(?<!\w)(?:(?:\+34|0034)[\s.-]?)?[689](?:[\s.-]?\d){8}(?!\d)"
+    ),
     "email": re.compile(
         r"\b[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}\b"
     ),
@@ -173,7 +179,7 @@ PATTERNS = {
         r"|\b[A-Za-z0-9][A-Za-z0-9.\-]*\.(?:com|es|net|org|cat|eu|edu|gov|info|biz)\b"
     ),
     "doctor": re.compile(
-        r"\bdr[as]?\.?\s+(?!(?:OI|OD|HTA|EA|AP|ANM|AMC|dret|dreta|drenaje|dren|droga|drogueta|dramático|drástica)\b)[a-zÁÉÍÓÚÑ][a-zjqñáéíóúü]+(?:\s+[a-zÁÉÍÓÚÑ][a-zjqñáéíóúü]+)*(?=[.,;?\)\]\/\s-]*|$)",
+        r"\b(?:dr[as]?\.?|doctora?)\s*[:.]?\s+(?!(?:OI|OD|HTA|EA|AP|ANM|AMC|dret|dreta|drenaje|dren|droga|drogueta|dramático|drástica)\b)[a-zÁÉÍÓÚÑ][a-zjqñáéíóúü]+(?:\s+[a-zÁÉÍÓÚÑ][a-zjqñáéíóúü]+)*(?=[.,;?\)\]\/\s-]*|$)",
         re.IGNORECASE,
     ),
     "age": re.compile(r"\b\d{1,3}\s?(?:años?|a)\b", re.IGNORECASE),
@@ -188,11 +194,7 @@ PATTERNS = {
     ),
     "name_upper": re.compile(r"\b[A-ZÁÉÍÓÚÑ]{3,}(?:[\s,/,-]{1,2}[A-ZÁÉÍÓÚÑ]{2,})+\b"),
     "name_mixed": re.compile(r"\b[A-ZÁÉÍÓÚÑ][a-zjqñáéíúü]+(?:[\s,/,-]{1,2}[A-ZÁÉÍÓÚÑ][a-zjqñáéíúü]+)+\b"),
-    "identifier": re.compile(r"\(?\d{6,11}\)?"),
-    "hospital": re.compile(
-        r"\b(?:H\.|Hospital|Clínica|CAP|Centre)\s+(?:(?:de|del|i|y|la|el|san|sant|santa)\s+)*[A-ZÁÉÍÓÚÑ][a-zjqñáéíóúü]+(?:[\s-](?:de|del|i|y|la|el|san|sant|santa|[A-ZÁÉÍÓÚÑ][a-zjqñáéíóúü]+))*\b",
-        re.IGNORECASE,
-    ),
+    "name_single": re.compile(r"\b[A-ZÁÉÍÓÚÑ][a-záéíóúüñç]{1,}\b"),
     "address": re.compile(
         r"\b(?:Calle|Carrer|Avenida|Av\.?|Avda\.?|Paseo|Passeig|Plaza|Plaça|C\.?/?|Camino|Camí|Via|Vía|Ronda|Travesía|Travesia|Travessera|Passatge|Pasaje|Carretera|Ctra\.?)\s+"
         r"(?:(?:de|la|el|del|dels|i|y)\s+){0,2}"
@@ -200,6 +202,115 @@ PATTERNS = {
         r"(?:\s+(?:de|la|el|del|dels|i|y|san|sant|santa)\s+[A-ZÁÉÍÓÚÜ][a-záéíóúüñçàèìòù]{1,25}){0,3}"
         r"(?:,?\s*\d{1,4}(?:\s*[A-Za-z])?)?"
     ),
+}
+
+# Identificadores con formatos concretos (DNI/NIE con letra válida, NHC, CIP,
+# Seguridad Social). La prioridad de la más específica se resuelve en el dedup
+# por solape de `_regex_detect`.
+IDENTIFIER_PATTERNS = {
+    "dni": re.compile(r"\b\d{8}[A-Za-z]\b"),
+    "nie": re.compile(r"\b[XYZ]\d{7}[A-Za-z]\b"),
+    "ss": re.compile(r"\b\d{2}/\d{8}/\d{2}\b"),
+    "cip": re.compile(r"\b[A-Z]{4}\d{10}\b"),
+    "nhc_labeled": re.compile(
+        r"\b(?:NHC|HC|N[ºo]\s*H[ªa]|n[ºo]\s*(?:de\s*)?(?:historia|h[ªa]|hc|hist[oò]ria))\s*[:#.\-]?\s*\d{4,11}\b",
+        re.IGNORECASE,
+    ),
+    "nhc_22_5": re.compile(r"\b\d{2}[\s-]\d{2}[\s-]\d{5}\b"),
+    "nhc_2_8_2": re.compile(r"\b\d{2}[-/]\d{7,8}[-/]\d{2}\b"),
+    "plain": re.compile(r"\(?\b\d{6,10}\b\)?"),
+}
+
+_DNI_LETTERS = "TRWAGMYFPDXBNJZSQVHLCKE"
+
+
+def _valid_dni(text: str) -> bool:
+    if len(text) == 9 and text[8].isalpha() and text[:8].isdigit():
+        return _DNI_LETTERS[int(text[:8]) % 23] == text[8].upper()
+    return False
+
+
+def _valid_nie(text: str) -> bool:
+    if len(text) == 9 and text[0] in "XYZ" and text[1:8].isdigit() and text[8].isalpha():
+        num = int(str("XYZ".index(text[0])) + text[1:8])
+        return _DNI_LETTERS[num % 23] == text[8].upper()
+    return False
+
+
+# Cabecera de hospital, con el nombre propio exigido en mayúscula inicial
+# (case-sensitive) para no tragarse "clínica ocular" ni "hospital por dolor".
+_HOSPITAL_HEAD = re.compile(
+    r"\b(?:Hospital|Clínica|Complejo\s+Hospitalario|CAP|Centre|Centro\s+de\s+Salud)\b",
+    re.IGNORECASE,
+)
+_HOSPITAL_CONN = re.compile(
+    r"(?:de\s+la|del|de|la|el|los|las|i|y|San|Sant|Santa|Virgen|Marqués|Doctor|Dr\.?)\s+",
+    re.IGNORECASE,
+)
+_TITLECASE = re.compile(r"[A-ZÁÉÍÓÚÑ][a-záéíóúüñç]+")
+
+
+def _hospital_spans(text: str) -> list[tuple]:
+    """Devuelve (start, end) de nombres de hospital.
+
+    El nombre debe contener al menos una palabra en mayúscula inicial tras la
+    cabecera; se extiende por conectores y palabras en mayúscula inicial, y por
+    el patrón "12 de Octubre".
+    """
+    spans = []
+    for m in _HOSPITAL_HEAD.finditer(text):
+        i = m.end()
+        end = m.end()
+        consumed_name = False
+        while i < len(text):
+            j = i
+            while j < len(text) and text[j].isspace():
+                j += 1
+            conn = _HOSPITAL_CONN.match(text, j)
+            if conn:
+                i = conn.end()
+                continue
+            wm = _TITLECASE.match(text, j)
+            if wm:
+                end = wm.end()
+                consumed_name = True
+                i = end
+                continue
+            dm = re.match(r"\d{1,2}\s+de\s+", text[j:])
+            if dm:
+                nm = _TITLECASE.match(text, j + dm.end())
+                if nm:
+                    end = nm.end()
+                    consumed_name = True
+                    i = end
+                    continue
+            break
+        if consumed_name:
+            spans.append((m.start(), end))
+    return spans
+
+
+# Disparadores de firma: "Remitido por:", "Emitido por:", "Fdo:", "Firmado por:".
+_SIG_TRIGGER = re.compile(
+    r"(?:Remitido\s+por|Emitido\s+por|Fdo|Firmado\s+por)\s*[:.]?\s*",
+    re.IGNORECASE,
+)
+
+# Términos genéricos en mayúscula inicial que NO son nombres de persona
+# (cabeceras, campos de plantilla, epónimos, bacterias). Lista genérica por
+# categoría, no nombres concretos de dev.
+_TITLECASE_STOPLIST = {
+    "localidad", "provincia", "historia", "actual", "antecedentes",
+    "personales", "familiares", "motivo", "consulta", "enfermedad",
+    "exploración", "física", "pruebas", "complementarias", "evolución",
+    "tratamiento", "diagnóstico", "diagnostico", "curso", "clínico",
+    "clínica", "alergias", "hábitos", "habitos", "tóxicos", "toxicos",
+    "interconsultas", "observaciones", "plan", "resumen", "cuidados",
+    "intensivos", "paliativos", "neonatales", "antígeno", "prostático",
+    "específico", "escherichia", "coli", "budd", "chiari", "ziehl",
+    "nielsen", "melanoma", "priapismo", "remitido", "servicio", "unidad",
+    "centro", "universidad", "facultad", "medicina", "odontología",
+    "instituto", "hospital", "complejo", "fundación", "fundació",
 }
 
 NAME_KEYWORDS = [
@@ -278,7 +389,7 @@ class Anonymizer:
     STRIDE = 128
     BATCH_SIZE = 32
 
-    def __init__(self, model_dir=None, device=None, threshold=0.1):
+    def __init__(self, model_dir=None, device=None, threshold=0.1, use_presidio=None):
         try:
             import torch
         except ImportError as exc:
@@ -298,6 +409,13 @@ class Anonymizer:
         self.model_dir = Path(model_dir) if model_dir else DEFAULT_MODEL_DIR
         self.device = device or ("cuda:0" if torch.cuda.is_available() else "cpu")
         self.threshold = threshold
+        # Presidio es un extra opcional, desactivado por defecto. Se activa con
+        # PUKARA_ENABLE_PRESIDIO=1 (ver .env.example): añade recall en
+        # NAME/EMAIL/LOCATION y reduce el leakage a costa de bajar el F1.
+        if use_presidio is None:
+            raw = _read_env("PUKARA_ENABLE_PRESIDIO", "").strip().lower()
+            use_presidio = raw in ("1", "true", "yes", "on")
+        self.use_presidio = use_presidio
 
         model_path = self.model_dir / model_dirname()
         if not model_path.exists():
@@ -407,29 +525,75 @@ class Anonymizer:
 
     # ── Detección regex ────────────────────────────────────────────────────
     def _regex_detect(self, text: str) -> list[dict]:
-        matches = []
+        # matches: (start, end, label, text, priority, rule). En el dedup por
+        # solape gana la mayor prioridad; en caso de empate, el span más largo.
+        # 5 = identificadores/contactos deterministas, 4 = teléfono/fecha/hora/
+        # edad, 3 = resto de reglas, 2 = nombres, 1 = discovery.
+        matches: list = []
         blocked = MEDICAL_ACRONYMS | LISTA_BLANCA
 
-        for match in PATTERNS["date"].finditer(text):
-            matches.append((match.start(), match.end(), "DATE", match.group()))
-        for match in PATTERNS["time"].finditer(text):
-            matches.append((match.start(), match.end(), "TIME", match.group()))
-        for label in ["phone", "email", "url", "doctor", "hospital", "age", "location", "address", "family_relation", "identifier"]:
-            for match in PATTERNS[label].finditer(text):
-                if label == "family_relation":
-                    out_label = "RELATION"
-                elif label == "address":
-                    out_label = "LOCATION"
-                else:
-                    out_label = label.upper()
-                matches.append((match.start(), match.end(), out_label, match.group()))
+        def add(start, end, label, t, prio, rule):
+            if end > start:
+                matches.append((start, end, label, t, prio, rule))
+
+        for m in PATTERNS["date"].finditer(text):
+            add(m.start(), m.end(), "DATE", m.group(), 4, "date")
+        for m in PATTERNS["time"].finditer(text):
+            add(m.start(), m.end(), "TIME", m.group(), 4, "time")
+        for m in PATTERNS["phone"].finditer(text):
+            add(m.start(), m.end(), "PHONE", m.group(), 4, "phone")
+        for m in PATTERNS["email"].finditer(text):
+            add(m.start(), m.end(), "EMAIL", m.group(), 5, "email")
+        for m in PATTERNS["url"].finditer(text):
+            add(m.start(), m.end(), "URL", m.group(), 5, "url")
+        for m in PATTERNS["doctor"].finditer(text):
+            add(m.start(), m.end(), "DOCTOR", m.group(), 3, "doctor")
+        for m in PATTERNS["age"].finditer(text):
+            add(m.start(), m.end(), "AGE", m.group(), 4, "age")
+        for m in PATTERNS["location"].finditer(text):
+            add(m.start(), m.end(), "LOCATION", m.group(), 3, "location")
+        for m in PATTERNS["address"].finditer(text):
+            add(m.start(), m.end(), "LOCATION", m.group(), 3, "address")
+        for m in PATTERNS["family_relation"].finditer(text):
+            add(m.start(), m.end(), "RELATION", m.group(), 3, "family_relation")
+        for s, e in _hospital_spans(text):
+            add(s, e, "HOSPITAL", text[s:e], 3, "hospital")
+
+        # Identificadores con formatos concretos.
+        for m in IDENTIFIER_PATTERNS["dni"].finditer(text):
+            if _valid_dni(m.group()):
+                add(m.start(), m.end(), "IDENTIFICADOR", m.group(), 5, "dni")
+        for m in IDENTIFIER_PATTERNS["nie"].finditer(text):
+            if _valid_nie(m.group()):
+                add(m.start(), m.end(), "IDENTIFICADOR", m.group(), 5, "nie")
+        for m in IDENTIFIER_PATTERNS["ss"].finditer(text):
+            add(m.start(), m.end(), "IDENTIFICADOR", m.group(), 5, "ss")
+        for m in IDENTIFIER_PATTERNS["cip"].finditer(text):
+            add(m.start(), m.end(), "IDENTIFICADOR", m.group(), 5, "cip")
+        for m in IDENTIFIER_PATTERNS["nhc_labeled"].finditer(text):
+            add(m.start(), m.end(), "IDENTIFICADOR", m.group(), 5, "nhc_labeled")
+        for m in IDENTIFIER_PATTERNS["nhc_22_5"].finditer(text):
+            add(m.start(), m.end(), "IDENTIFICADOR", m.group(), 5, "nhc_22_5")
+        for m in IDENTIFIER_PATTERNS["nhc_2_8_2"].finditer(text):
+            add(m.start(), m.end(), "IDENTIFICADOR", m.group(), 5, "nhc_2_8_2")
+        for m in IDENTIFIER_PATTERNS["plain"].finditer(text):
+            t = m.group().strip("()")
+            # Los números de 9 dígitos que empiezan por 6/8/9 son teléfono;
+            # la regla de teléfono (más específica) los posee.
+            if re.fullmatch(r"[689](?:[\s.-]?\d){8}", t):
+                continue
+            add(m.start(), m.end(), "IDENTIFICADOR", m.group(), 3, "plain")
 
         def already_marked(start, end):
-            return any(s <= start and end <= e for s, e, _, _ in matches)
+            return any(s <= start and end <= e for s, e, *_ in matches)
 
-        # Names preceded by a keyword
+        # Nombres precedidos por palabra clave (nombre, paciente, apellidos…).
         context_pattern = re.compile(
             r"\b(" + "|".join(NAME_KEYWORDS) + r")(?=" + ROBUST_PUNC + r"|$)",
+            re.IGNORECASE,
+        )
+        single_context_pattern = re.compile(
+            r"\b(nombre|nom|apellidos|cognoms)(?=" + ROBUST_PUNC + r"|$)",
             re.IGNORECASE,
         )
         lines = text.split("\n")
@@ -439,24 +603,54 @@ class Anonymizer:
                 for pattern_name in ["name_upper", "name_mixed"]:
                     for match in PATTERNS[pattern_name].finditer(line):
                         name = match.group()
-                        if name.lower() not in blocked and (pattern_name != "name_mixed" or name.lower() not in NAME_KEYWORDS):
-                            start = current_pos + match.start()
-                            end = current_pos + match.end()
-                            if not already_marked(start, end):
-                                matches.append((start, end, "PERSON", name))
+                        if name.lower() in blocked:
+                            continue
+                        if pattern_name == "name_mixed" and name.lower() in NAME_KEYWORDS:
+                            continue
+                        start = current_pos + match.start()
+                        end = current_pos + match.end()
+                        if not already_marked(start, end):
+                            add(start, end, "PERSON", name, 2, "name_context")
+                if single_context_pattern.search(line):
+                    for match in PATTERNS["name_single"].finditer(line):
+                        name = match.group()
+                        if name.lower() in blocked or name.lower() in NAME_KEYWORDS:
+                            continue
+                        if name.lower() in _TITLECASE_STOPLIST:
+                            continue
+                        start = current_pos + match.start()
+                        end = current_pos + match.end()
+                        if not already_marked(start, end):
+                            add(start, end, "PERSON", name, 2, "name_single")
             current_pos += len(line) + 1
 
-        # UPPERCASE with comma (surnames, name)
+        # Nombres de firma: "Remitido por: X", "Emitido por: X", "Fdo: X".
+        for sig in _SIG_TRIGGER.finditer(text):
+            pos = sig.end()
+            for pattern_name in ["name_mixed", "name_single"]:
+                m = PATTERNS[pattern_name].match(text, pos)
+                if not m:
+                    continue
+                name = m.group()
+                if name.lower() in blocked or name.lower() in NAME_KEYWORDS:
+                    break
+                if pattern_name == "name_single" and name.lower() in _TITLECASE_STOPLIST:
+                    break
+                if not already_marked(m.start(), m.end()):
+                    add(m.start(), m.end(), "PERSON", name, 2, "signature")
+                break
+
+        # MAYÚSCULAS con coma (apellidos, nombre).
         for match in PATTERNS["name_upper"].finditer(text):
             name = match.group()
             clean_name = re.sub(r"[.,;:]+$", "", name).strip()
             if "," in name and name.lower() not in blocked and clean_name not in EXCLUDED_HEADERS:
                 if not already_marked(match.start(), match.end()):
-                    matches.append((match.start(), match.end(), "GENERICA", name))
+                    add(match.start(), match.end(), "GENERICA", name, 2, "name_upper_comma")
 
-        # Discovery pass: re-search texts already found
+        # Discovery pass: re-busca textos ya encontrados.
         discovered = set()
-        for _, _, _, t in matches:
+        for _s, _e, _lab, t, _p, _r in matches:
             clean = t.strip("()[].,;?/- ")
             if len(clean) > 3:
                 discovered.add(clean)
@@ -464,24 +658,21 @@ class Anonymizer:
             pattern = re.compile(r"\b" + re.escape(t) + r"(?=" + ROBUST_PUNC + r"|$)", re.IGNORECASE)
             for match in pattern.finditer(text):
                 label = "PERSON"
-                for _s, _e, lab, mt in matches:
+                for _s, _e, lab, mt, _p, _r in matches:
                     if t.lower() in mt.lower():
                         label = lab
                         break
                 if not already_marked(match.start(), match.end()):
-                    matches.append((match.start(), match.end(), label, match.group()))
+                    add(match.start(), match.end(), label, match.group(), 1, "discovery")
 
-        # De-duplicate overlapping spans: keep the longest, so a phone is not
-        # double-matched by the identifier rule or a URL by the email domain.
-        # Overlapping placeholders would corrupt reversible replacement.
+        # Dedup por solape: mayor prioridad gana; empate → el más largo.
         deduped = []
-        for m in sorted(matches, key=lambda x: (x[1] - x[0]), reverse=True):
+        for m in sorted(matches, key=lambda x: (-x[4], -(x[1] - x[0]), x[0])):
             if not any(m[0] < k[1] and k[0] < m[1] for k in deduped):
                 deduped.append(m)
-        matches = deduped
-        matches.sort(key=lambda x: x[0])
+        deduped.sort(key=lambda x: x[0])
         entities = []
-        for s, e, label, t in matches:
+        for s, e, label, t, _p, _r in deduped:
             entities.append({
                 "start": s, "end": e,
                 "label": _map_step2_label(label), "text": t,
@@ -489,18 +680,51 @@ class Anonymizer:
         return entities
 
     # ── Detección combinada ────────────────────────────────────────────────
+    # Clases deterministas donde la regex gana sobre BERT en caso de solape:
+    # los formatos concretos (email, url, id, fecha, hora, teléfono) son más
+    # fiables que las predicciones del modelo sobre el mismo span (el modelo
+    # fragmenta emails y confunde NHC/DNI con teléfono). En el resto de clases
+    # (NAME, LOCATION, HOSPITAL, SEX, …) gana BERT.
+    _REGEX_WINS = {"EMAIL", "URL", "ID", "DATE", "TIME", "PHONE"}
+
     @staticmethod
     def _overlap(a, b):
         return a["start"] < b["end"] and b["start"] < a["end"]
 
     def detect(self, text: str) -> list[dict]:
-        """BERT (base) + regex (complement that does not overlap BERT)."""
+        """BERT (base) + regex (formato determinista) + Presidio (relleno).
+
+        Regla de desacuerdo BERT/regex sobre el mismo span (documentada en
+        `docs/dev/eval-diagnosis.md`):
+
+        - la regex gana en las clases deterministas `_REGEX_WINS`
+          (EMAIL/URL/ID/DATE/TIME/PHONE), salvo que la regex diga PHONE y
+          BERT diga ID (un ID no se degrada a teléfono);
+        - en cualquier otra clase gana BERT.
+        """
         if not text or not text.strip():
             return []
         merged = list(self._bert_detect(text))
         for e in self._regex_detect(text):
-            if not any(self._overlap(e, m) for m in merged):
+            overlaps = [m for m in merged if self._overlap(e, m)]
+            if not overlaps:
                 merged.append(e)
+            elif (e["label"] in self._REGEX_WINS
+                  and not (e["label"] == "PHONE"
+                           and any(m["label"] == "ID" for m in overlaps))):
+                # La regex gana: retira todos los spans BERT que solapan y
+                # deja el span determinista (p. ej. un email completo frente a
+                # los fragmentos que el modelo produce sobre él).
+                merged = [m for m in merged if not self._overlap(e, m)]
+                merged.append(e)
+            # en cualquier otro caso gana BERT
+        # Presidio solo rellena huecos: sus spans NAME/EMAIL/LOCATION se añaden
+        # únicamente si no solapan con lo ya detectado por BERT+regex.
+        if self.use_presidio:
+            from . import presidio
+            for e in presidio.detect_limited(text):
+                if not any(self._overlap(e, m) for m in merged):
+                    merged.append(e)
         merged.sort(key=lambda x: x["start"])
         return merged
 

@@ -1,0 +1,170 @@
+{
+  "script": "eval/meddocan.py",
+  "generated": "2026-09-19T10:32:06.954808Z",
+  "code_revision": "b468f31e2e49cb48bf7a93ca0b48be313bc1625a",
+  "mode": "bert",
+  "presidio": false,
+  "model": {
+    "repo": "BSC-NLP4BIA/bsc-bio-ehr-es-carmen-anon",
+    "revision": "83db1112c37c7ef527a9ba6d6b4d1be18b4bca9b",
+    "weights_sha256": "a8b2976c284b72db42adf97df8d5a1609ca477f3abdae71a5d201d4d3ff89acd"
+  },
+  "seed": 42,
+  "splits": [
+    "dev"
+  ],
+  "documents": 250,
+  "word_level": {
+    "precision": 0.9293,
+    "recall": 0.7467,
+    "f1": 0.828,
+    "f1_ci95": [
+      0.8163,
+      0.8385
+    ]
+  },
+  "span_strict": {
+    "precision": 0.5718,
+    "recall": 0.5944,
+    "f1": 0.5829
+  },
+  "span_relaxed": {
+    "precision": 0.733,
+    "recall": 0.7619,
+    "f1": 0.7472,
+    "f1_ci95": [
+      0.741,
+      0.7575
+    ]
+  },
+  "per_class": {
+    "AGE": {
+      "precision": 0.9701195219123506,
+      "recall": 0.9347408829174664,
+      "f1": 0.9521016617790812,
+      "support": 521
+    },
+    "DATE": {
+      "precision": 0.9521674140508222,
+      "recall": 0.8798342541436464,
+      "f1": 0.914572864321608,
+      "support": 724
+    },
+    "EMAIL": {
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "support": 241
+    },
+    "FAMILY": {
+      "precision": 0.28346456692913385,
+      "recall": 0.391304347826087,
+      "f1": 0.3287671232876712,
+      "support": 92
+    },
+    "HOSPITAL": {
+      "precision": 0.16336633663366337,
+      "recall": 0.2323943661971831,
+      "f1": 0.19186046511627908,
+      "support": 142
+    },
+    "ID": {
+      "precision": 0.002066115702479339,
+      "recall": 0.0026845637583892616,
+      "f1": 0.002335084646818447,
+      "support": 745
+    },
+    "LOCATION": {
+      "precision": 0.5552075176194206,
+      "recall": 0.40101809954751133,
+      "f1": 0.4656814449917898,
+      "support": 1768
+    },
+    "NAME": {
+      "precision": 0.6495132127955494,
+      "recall": 0.467,
+      "f1": 0.5433391506689936,
+      "support": 1000
+    },
+    "ORGANIZATION": {
+      "precision": 0.015873015873015872,
+      "recall": 0.013888888888888888,
+      "f1": 0.014814814814814815,
+      "support": 72
+    },
+    "OTHER": {
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "support": 6
+    },
+    "PHONE": {
+      "precision": 0.005106382978723404,
+      "recall": 0.1935483870967742,
+      "f1": 0.009950248756218905,
+      "support": 31
+    },
+    "PROFESSION": {
+      "precision": 0.42857142857142855,
+      "recall": 0.75,
+      "f1": 0.5454545454545454,
+      "support": 4
+    },
+    "SEX": {
+      "precision": 0.905,
+      "recall": 0.3978021978021978,
+      "f1": 0.5526717557251909,
+      "support": 455
+    },
+    "URL": {
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "support": 0
+    }
+  },
+  "phi_neutralization": {
+    "covered_spans": 4473,
+    "total_spans": 5801,
+    "rate": 0.7711,
+    "ci95": [
+      0.7638,
+      0.7978
+    ]
+  },
+  "leakage": {
+    "wide": {
+      "leaked_docs": 197,
+      "total_docs": 250,
+      "rate": 0.788,
+      "ci95": [
+        0.732,
+        0.84
+      ]
+    },
+    "direct": {
+      "leaked_docs": 195,
+      "total_docs": 250,
+      "rate": 0.78,
+      "ci95": [
+        0.728,
+        0.828
+      ]
+    },
+    "any_phi": {
+      "leaked_docs": 214,
+      "total_docs": 250,
+      "rate": 0.856,
+      "ci95": [
+        0.812,
+        0.896
+      ]
+    }
+  },
+  "notes": [
+    "Gold and predictions are unified-label PHI spans.",
+    "Leakage wide (principal): EMAIL, FAMILY, NAME, ID, PHONE, URL, PROFESSIONAL.",
+    "Leakage direct: EMAIL, NAME, PHONE, ID.",
+    "Leakage any_phi: any gold PHI span missed (label-agnostic)."
+  ]
+}

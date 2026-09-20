@@ -1,0 +1,169 @@
+{
+  "script": "eval/diagnose.py",
+  "code_revision": "b468f31e2e49cb48bf7a93ca0b48be313bc1625a",
+  "documents": 250,
+  "confusion": {
+    "EMAIL": {
+      "EMAIL": 238,
+      "NAME": 1,
+      "URL": 1,
+      "(FN)": 1
+    },
+    "SEX": {
+      "SEX": 189,
+      "HOSPITAL": 109,
+      "(FN)": 79,
+      "ID": 68,
+      "ORGANIZATION": 10
+    },
+    "AGE": {
+      "AGE": 495,
+      "(FN)": 15,
+      "FAMILY": 10,
+      "ID": 1
+    },
+    "ID": {
+      "ID": 710,
+      "PHONE": 13,
+      "(FN)": 12,
+      "NAME": 1,
+      "FAMILY": 1,
+      "SEX": 7,
+      "PROFESSION": 1
+    },
+    "NAME": {
+      "NAME": 751,
+      "PHONE": 113,
+      "EMAIL": 2,
+      "ID": 62,
+      "FAMILY": 42,
+      "SEX": 4,
+      "LOCATION": 14,
+      "(FN)": 8,
+      "DATE": 3,
+      "HOSPITAL": 1
+    },
+    "DATE": {
+      "DATE": 723,
+      "(FN)": 1
+    },
+    "LOCATION": {
+      "LOCATION": 1036,
+      "PHONE": 241,
+      "ID": 37,
+      "(FN)": 350,
+      "NAME": 63,
+      "AGE": 2,
+      "HOSPITAL": 35,
+      "DATE": 3,
+      "OTHER": 1
+    },
+    "FAMILY": {
+      "FAMILY": 76,
+      "(FN)": 16
+    },
+    "HOSPITAL": {
+      "HOSPITAL": 119,
+      "NAME": 16,
+      "(FN)": 6,
+      "DATE": 1
+    },
+    "PHONE": {
+      "PHONE": 30,
+      "ID": 1
+    },
+    "PROFESSION": {
+      "PROFESSION": 3,
+      "(FN)": 1
+    },
+    "ORGANIZATION": {
+      "NAME": 5,
+      "(FN)": 39,
+      "HOSPITAL": 16,
+      "OTHER": 1,
+      "LOCATION": 6,
+      "ORGANIZATION": 3,
+      "ID": 1,
+      "PROFESSION": 1
+    },
+    "OTHER": {
+      "(FN)": 4,
+      "ID": 1,
+      "FAMILY": 1
+    }
+  },
+  "name_false_negatives": [
+    {
+      "doc": "S0211-69952009000500014-1",
+      "text": "Francisco Rivera Hernández",
+      "start": 2608,
+      "end": 2634
+    },
+    {
+      "doc": "S0211-69952012000700031-1",
+      "text": "Gerardo Armando Latino",
+      "start": 2223,
+      "end": 2245
+    },
+    {
+      "doc": "S0211-69952014000400019-1",
+      "text": "Pablo Justo-Ávila",
+      "start": 2624,
+      "end": 2641
+    },
+    {
+      "doc": "S0212-16112011000300031-1",
+      "text": "Maria José López Otero",
+      "start": 3411,
+      "end": 3433
+    },
+    {
+      "doc": "S0212-71992005001000009-1",
+      "text": "rancisco Javier Candel",
+      "start": 3028,
+      "end": 3050
+    },
+    {
+      "doc": "S0365-66912005001200010-1",
+      "text": "Paola Maldonado Cid",
+      "start": 2708,
+      "end": 2727
+    },
+    {
+      "doc": "S0365-66912006000200012-1",
+      "text": "Elisa",
+      "start": 9,
+      "end": 14
+    },
+    {
+      "doc": "S0365-66912007000800012-1",
+      "text": "Maite",
+      "start": 2192,
+      "end": 2197
+    }
+  ],
+  "over_redaction": {
+    "fp_tokens_combined": 1689,
+    "non_gold_tokens": 99268,
+    "rate": 0.017
+  },
+  "rule_fp_tokens": {
+    "date": 29,
+    "time": 9,
+    "phone": 0,
+    "email": 0,
+    "url": 0,
+    "doctor": 292,
+    "age": 177,
+    "location": 0,
+    "family_relation": 12,
+    "name_upper": 64,
+    "name_mixed": 1283,
+    "name_single": 10056,
+    "address": 20
+  },
+  "notes": [
+    "Confusión: por cada span gold, la clase de la primera predicción que se solapa.",
+    "Sobre-redacción por regla: tokens NO-PHI cubiertos por cada regex (sin dedup)."
+  ]
+}

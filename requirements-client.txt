@@ -1,6 +1,6 @@
 # Dependencias opcionales del cliente para la anonimización BERT on-device
-# (client_app.py, local_ollama.py, anonymizer.py). No se instalan en el
-# servidor ni en CI.
+# (client_app.py, local_ollama.py, anonymizer.py, presidio.py). No se instalan
+# en el servidor ni en CI.
 #
 # Seguridad: pip-audit reporta avisos en torch y transformers que no aplican
 # a Pukara, que solo ejecuta inferencia sobre un modelo BERT local y de
@@ -8,3 +8,7 @@
 torch>=2.1
 transformers>=4.40
 huggingface_hub>=0.23
+presidio-analyzer==2.2.364
+# El modelo spaCy de Presidio no está en PyPI; se instala desde el wheel
+# oficial de explosion/spacy-models:
+es-core-news-lg @ https://github.com/explosion/spacy-models/releases/download/es_core_news_lg-3.8.0/es_core_news_lg-3.8.0-py3-none-any.whl

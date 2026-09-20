@@ -21,6 +21,10 @@ from src import anonymizer  # noqa: E402
 # leakage is the security-critical figure: EMAIL, NAME, PHONE, ID.
 CRITICAL_TAGS = {"EMAIL", "NAME", "PHONE", "ID"}
 
+# Definición amplia de leakage (principal, PROTOCOL.md): las 7 clases de la
+# primera versión.
+WIDE_TAGS = {"EMAIL", "FAMILY", "NAME", "ID", "PHONE", "URL", "PROFESSIONAL"}
+
 # Pinned model identity used for every BERT-based evaluation.
 MODEL_META = {
     "repo": "BSC-NLP4BIA/bsc-bio-ehr-es-carmen-anon",
@@ -92,25 +96,31 @@ def regex_only_detect(text: str) -> list[dict]:
 class Predictor:
     """Unified detector/anonymizer for the eval harness.
 
-    `mode` is one of "regex", "bert" or "combined". BERT modes load the model
-    once (default `models/bsc-bio-ehr-es-carmen-anon`).
+    `mode` is one of "regex", "bert", "combined" or "presidio".
+    "combined" runs BERT+regex (+ Presidio when `use_presidio=True`, default).
+    "presidio" is the standalone baseline (all Presidio entities, no BERT).
     """
 
-    def __init__(self, mode: str, model_dir=None):
+    def __init__(self, mode: str, model_dir=None, use_presidio=False):
         self.mode = mode
         if mode == "regex":
             self._anon = anonymizer.Anonymizer.__new__(anonymizer.Anonymizer)
             self._anon.reset()
             self._anon.detect = self._anon._regex_detect
+        elif mode == "presidio":
+            self._anon = None
         else:
             from src import anonymizer as _an
 
             # Anonymizer expects the PARENT directory (it appends the repo
             # basename), i.e. the `models/` folder.
             model_dir = model_dir or (ROOT / "models")
-            self._anon = _an.Anonymizer(model_dir=model_dir)
+            self._anon = _an.Anonymizer(model_dir=model_dir, use_presidio=use_presidio)
 
     def detect(self, text: str) -> list[dict]:
+        if self.mode == "presidio":
+            from src import presidio
+            return presidio.detect_full(text)
         if self.mode == "bert":
             return self._anon._bert_detect(text)
         return self._anon.detect(text)
@@ -198,18 +208,23 @@ def word_prf(text: str, gold: list[dict], pred: list[dict]) -> tuple:
     return p, r, f1
 
 
-def document_leakage(gold: list[dict], pred: list[dict]) -> bool:
-    """True if a document has at least one missed direct identifier.
+def _document_leakage_for(gold: list[dict], pred: list[dict], tags: set) -> bool:
+    """True if a gold span of any of `tags` has no overlapping prediction."""
+    return any(
+        g["label"] in tags and not any(_span_overlap(g, p) for p in pred)
+        for g in gold
+    )
 
-    A gold span leaks when no predicted span overlaps it. Only the direct
-    identifiers (EMAIL, NAME, PHONE, ID) count.
-    """
-    for g in gold:
-        if g["label"] in CRITICAL_TAGS and not any(
-            _span_overlap(g, p) for p in pred
-        ):
-            return True
-    return False
+
+def document_leakage(gold: list[dict], pred: list[dict]) -> bool:
+    """True if a document has at least one missed direct identifier
+    (EMAIL, NAME, PHONE, ID)."""
+    return _document_leakage_for(gold, pred, CRITICAL_TAGS)
+
+
+def document_leakage_wide(gold: list[dict], pred: list[dict]) -> bool:
+    """True if a document misses a span of the wide definition (7 clases)."""
+    return _document_leakage_for(gold, pred, WIDE_TAGS)
 
 
 def document_leakage_any(gold: list[dict], pred: list[dict]) -> bool:
