@@ -1,0 +1,24 @@
+{
+  "script": "eval/over_redaction.py",
+  "generated": "2026-09-20T08:09:51.507054Z",
+  "code_revision": "edc89685dc823e4988dce88c6ccd91f30ccda80d",
+  "dirty": false,
+  "mode": "combined",
+  "split": "test",
+  "documents": 250,
+  "seed": 42,
+  "bootstrap": 1000,
+  "over_redaction": {
+    "over_redacted_tokens": 1668,
+    "non_gold_tokens": 94081,
+    "rate": 0.0177,
+    "ci95": [
+      0.0178,
+      0.0203
+    ]
+  },
+  "notes": [
+    "Over-redaction: non-PHI tokens (no overlap with any gold span) that fall inside a predicted span.",
+    "Global rate with per-document bootstrap CI (95%, seed 42, 1000 resamples)."
+  ]
+}
