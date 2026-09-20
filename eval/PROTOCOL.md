@@ -194,5 +194,10 @@ depender de la etiqueta**, con el mismo evaluador que Pukara.
 ## 7. Fases descartadas
 
 - **Fase E (retención de conceptos clínicos, DisTEMIST/PharmaCoNER): descartada.**
-  No bloquea el release. Si se retoma, verificar antes que ninguno de los dos
-  corpus formó parte del entrenamiento del modelo CARMEN.
+  Pukara no es específico del dominio clínico: su detector y su formato de
+  entrada son agnósticos de dominio, por lo que una métrica de retención de
+  conceptos médicos sesgaría la evaluación hacia ese dominio. La métrica
+  agnóstica que la sustituye es la **sobre-redacción de tokens no-PHI**
+  (`eval/over_redaction.py`): % de tokens que no son PHI en gold y quedan dentro
+  de un span predicho. No bloquea el release. Si se retoma, verificar antes que
+  ninguno de los dos corpus formó parte del entrenamiento del modelo CARMEN.
