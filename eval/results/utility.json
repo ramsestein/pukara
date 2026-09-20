@@ -1,52 +1,85 @@
 {
   "script": "eval/utility.py",
-  "generated": "2026-09-19T08:09:40.803219Z",
-  "code_revision": "86e166302698c0b21052f3de840ea6be6ec34b12",
+  "generated": "2026-09-20T04:11:32.365100Z",
+  "code_revision": "f5f59f4a167610a5d29ccb09fdf68dd32a59a714",
   "roundtrip": {
     "texts": 57,
-    "failures": 0,
-    "rate": 1.0,
-    "examples": []
+    "failures": 2,
+    "rate": 0.9649,
+    "examples": [
+      {
+        "text": "Texto que ya contiene [NOMBRE_1] literal.",
+        "anonymized": "[NOMBRE_1] que ya contiene [NOMBRE_1] literal.",
+        "restored": "Texto que ya contiene Texto literal."
+      },
+      {
+        "text": "Corchetes anidados [[NOMBRE_1]] y [NOMBRE_10].",
+        "anonymized": "[NOMBRE_1] anidados [[NOMBRE_1]] y [NOMBRE_10].",
+        "restored": "Corchetes anidados [Corchetes] y [NOMBRE_10]."
+      }
+    ]
   },
   "robustness": {
     "uppercase": {
-      "restored": 0,
+      "restored": 56,
       "total": 56,
-      "rate": 0.0
+      "rate": 1.0
     },
     "bold_markers": {
-      "restored": 0,
+      "restored": 56,
       "total": 56,
-      "rate": 0.0
+      "rate": 1.0
     },
     "lost_brackets": {
-      "restored": 0,
+      "restored": 34,
       "total": 56,
-      "rate": 0.0
+      "rate": 0.6071
     },
-    "inner_space": {
-      "restored": 0,
+    "single_bracket": {
+      "restored": 50,
       "total": 56,
-      "rate": 0.0
+      "rate": 0.8929
+    },
+    "space_inner": {
+      "restored": 56,
+      "total": 56,
+      "rate": 1.0
     },
     "label_translated": {
-      "restored": 3,
+      "restored": 56,
       "total": 56,
-      "rate": 0.0536
+      "rate": 1.0
     },
     "plural_suffix": {
-      "restored": 0,
+      "restored": 56,
       "total": 56,
-      "rate": 0.0
+      "rate": 1.0
+    },
+    "genitive_suffix": {
+      "restored": 56,
+      "total": 56,
+      "rate": 1.0
     },
     "split_by_newline": {
-      "restored": 0,
+      "restored": 56,
       "total": 56,
-      "rate": 0.0
+      "rate": 1.0
     }
+  },
+  "spurious_restorations": {
+    "samples": 5,
+    "altered": 1,
+    "rate": 0.2,
+    "examples": [
+      {
+        "sample": "JSON: {\"nombre_1\": 1, \"fecha_2\": \"2024-05-12\"}.",
+        "restored": "JSON: {\"<valor:NOMBRE:1>\": 1, \"<valor:FECHA:2>\": \"2024-05-12\"}."
+      }
+    ]
   },
   "notes": [
     "Round-trip failures are bugs, not metrics.",
-    "Perturbations mimic deterministic LLM edits to placeholders."
+    "Perturbations mimic deterministic LLM edits to placeholders; the rate is the share of texts where ALL original entities are recovered.",
+    "spurious_restorations: share of legit bracket/underscore samples altered by the tolerant restoration regex (false positives)."
   ]
 }

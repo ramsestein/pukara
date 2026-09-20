@@ -137,6 +137,71 @@ TAGS = {
     "PHI": "ANONIMO",
 }
 
+# Traducción de etiquetas de placeholder para la restauración tolerante:
+# [NOMBRE_1] se reconoce también como [NAME_1], etc.
+_TAG_ALIASES = {
+    "NOMBRE": ("NOMBRE", "NAME"),
+    "FECHA": ("FECHA", "DATE"),
+    "HORA": ("HORA", "TIME"),
+    "PROFESIONAL": ("PROFESIONAL", "PROFESSIONAL"),
+    "FAMILIAR": ("FAMILIAR", "FAMILY"),
+    "PROFESION": ("PROFESION", "PROFESSION"),
+    "EDAD": ("EDAD", "AGE"),
+    "SEXO": ("SEXO", "SEX"),
+    "LUGAR": ("LUGAR", "LOCATION"),
+    "HOSPITAL": ("HOSPITAL",),
+    "ORGANIZACION": ("ORGANIZACION", "ORGANIZATION"),
+    "TELEFONO": ("TELEFONO", "PHONE"),
+    "CORREO": ("CORREO", "EMAIL"),
+    "URL": ("URL",),
+    "ID": ("ID",),
+    "ANONIMO": ("ANONIMO", "ANONYMOUS", "OTHER"),
+}
+
+
+def _ph_parts(ph: str) -> tuple:
+    """Extrae (tag, número) de un placeholder `[TAG_n]`."""
+    inner = ph.strip("[]")
+    if "_" in inner:
+        tag, num = inner.rsplit("_", 1)
+    else:
+        tag, num = inner, ""
+    return tag, num
+
+
+def _ph_num(ph: str) -> int:
+    num = _ph_parts(ph)[1]
+    return int(num) if num.isdigit() else 0
+
+
+def _restore_placeholder(text: str, ph: str, orig: str) -> str:
+    """Restaura un placeholder y sus perturbaciones toleradas.
+
+    Reconoce (insensible a mayúsculas): `[TAG_n]`, `**[TAG_n]**`, corchetes
+    ausentes o parciales, espacios entre tag y número, `[TAG_n]s`/`[TAG_n]'s`,
+    salto de línea entre tag y número, y la etiqueta traducida al inglés.
+    """
+    tag, num = _ph_parts(ph)
+    aliases = _TAG_ALIASES.get(tag.upper(), (tag,))
+    tag_alt = "(?:" + "|".join(re.escape(a) for a in aliases) + ")"
+    # El número no puede ir seguido de otro dígito (evita que [NOMBRE_1] se
+    # cuele dentro de [NOMBRE_10]). El sufijo plural/sajón (minúscula,
+    # case-sensitive) solo se admite tras un corchete de cierre. Con corchetes
+    # no se exige límite de palabra (un placeholder puede ir pegado a texto,
+    # p. ej. "CP[TELÉFONO_1]"); sin corchetes sí, para no cortar palabras.
+    core = tag_alt + r"[\s_]*" + re.escape(num) + r"(?!\d)"
+    pat = re.compile(
+        r"\*{0,2}(?:"
+        + r"\[\s*" + core + r"\s*\](?-i:'s|s)?"   # [TAG_n] y [TAG_n]s
+        + r"|"
+        + r"\[\s*" + core                         # [TAG_n  (solo apertura)
+        + r"|"
+        + r"(?<![A-Za-z0-9])" + core + r"\s*\]?"  # TAG_n o TAG_n] (sin apertura)
+        + r")\*{0,2}",
+        re.IGNORECASE,
+    )
+    return pat.sub(orig, text)
+
 
 def _map_bert_label(label: str) -> str:
     base = label.split("-")[-1]
@@ -515,7 +580,17 @@ class Anonymizer:
             if m["score"] < self.threshold or m["end"] <= m["start"]:
                 continue
             ent_text = text[m["start"]:m["end"]]
-            if ent_text.lower().strip() in LISTA_BLANCA:
+            stripped = ent_text.strip()
+            if not stripped:
+                continue  # el modelo a veces predice sobre saltos de línea
+            # El modelo produce fragmentos ruidosos (un dígito, "C", números
+            # cortos): se descartan. Un identificador/teléfono real tiene >= 5
+            # dígitos y una palabra >= 2 letras.
+            if len(stripped) < 2:
+                continue
+            if stripped.isdigit() and len(stripped) < 5:
+                continue
+            if stripped.lower() in LISTA_BLANCA:
                 continue
             entities.append({
                 "start": m["start"], "end": m["end"],
@@ -533,7 +608,7 @@ class Anonymizer:
         blocked = MEDICAL_ACRONYMS | LISTA_BLANCA
 
         def add(start, end, label, t, prio, rule):
-            if end > start:
+            if end > start and t.strip():
                 matches.append((start, end, label, t, prio, rule))
 
         for m in PATTERNS["date"].finditer(text):
@@ -744,9 +819,11 @@ class Anonymizer:
         return text
 
     def deanonymize(self, text: str) -> str:
-        # Longest placeholder first, to avoid breaking [NOMBRE_10] with [NOMBRE_1]
-        for ph, orig in sorted(self.ph_to_text.items(), key=lambda kv: len(kv[0]), reverse=True):
-            text = text.replace(ph, orig)
+        # Placeholders con número mayor primero, para no romper [NOMBRE_10]
+        # al restaurar [NOMBRE_1] (además la regex exige que el número no vaya
+        # seguido de más alfanuméricos).
+        for ph, orig in sorted(self.ph_to_text.items(), key=lambda kv: _ph_num(kv[0]), reverse=True):
+            text = _restore_placeholder(text, ph, orig)
         return text
 
 
