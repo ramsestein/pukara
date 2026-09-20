@@ -52,6 +52,9 @@ def main() -> int:
     carmen = load("carmen_pukara.json")
     presidio_meddocan = load("presidio_meddocan.json")
     presidio_carmen = load("presidio_carmen.json")
+    over_redaction_test = load("over_redaction_test.json")
+    over_redaction_test_presidio = load("over_redaction_test_presidio.json")
+    over_redaction_dev = load("over_redaction_dev.json")
     abl = {
         "regex": load("ablate_dev_regex.json"),
         "bert": load("ablate_dev_bert.json"),
@@ -199,6 +202,32 @@ def main() -> int:
         ]
     else:
         lines += ["No CARMEN-I results yet.\n"]
+
+    lines += ["## Over-redaction (non-PHI tokens altered)", ""]
+    if over_redaction_test:
+        p = over_redaction_test_presidio
+        o = over_redaction_test["over_redaction"]
+        lines += [
+            "Domain-agnostic metric: share of whitespace tokens that are **not** PHI "
+            "in gold but fall inside a predicted span (lower is better).",
+            "",
+            "| Split | Pukara | Presidio |",
+            "|---|---|---|",
+            f"| MEDDOCAN test | {_rate(o)} | {_rate(p['over_redaction']) if p else '—'} |",
+            "",
+        ]
+        if over_redaction_dev:
+            b = over_redaction_dev["breakdown"]["by_source"]
+            total = over_redaction_dev["breakdown"]["over_redacted_tokens"]
+            parts = [f"`{k}` {v} tokens ({_pct(v / total)})" for k, v in b.items()]
+            lines += [
+                f"Dev (diagnostic, not reportable): rate "
+                f"{_rate(over_redaction_dev['over_redaction'])}; per-component "
+                f"breakdown — " + ", ".join(parts) + ".",
+                "",
+            ]
+    else:
+        lines += ["No over-redaction results yet.\n"]
 
     lines += ["## Synthetic prompt benchmark", ""]
     if promptbench:

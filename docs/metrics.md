@@ -82,6 +82,16 @@ _CARMEN-I contains many documents with no gold PHI; the per-document bootstrap C
 
 _The external `ramsestein/presidio_carmen` repository is cited only as a source evaluation (`es_core_news_md`, 1,000 docs, character Jaccard) and is **not** comparable row-by-row with this table._
 
+## Over-redaction (non-PHI tokens altered)
+
+Domain-agnostic metric: share of whitespace tokens that are **not** PHI in gold but fall inside a predicted span (lower is better).
+
+| Split | Pukara | Presidio |
+|---|---|---|
+| MEDDOCAN test | 1.8% (CI 1.8%–2.0%) | 2.9% (CI 3.0%–3.4%) |
+
+Dev (diagnostic, not reportable): rate 1.7% (CI 1.7%–1.9%); per-component breakdown — `regex:NAME` 623 tokens (37.9%), `bert` 495 tokens (30.1%), `regex:ID` 241 tokens (14.7%), `regex:AGE` 169 tokens (10.3%), `regex:DATE` 27 tokens (1.6%), `bert+regex` 26 tokens (1.6%), `regex:OTHER` 16 tokens (1.0%), `regex:LOCATION` 15 tokens (0.9%), `regex:FAMILY` 12 tokens (0.7%), `regex:HOSPITAL` 9 tokens (0.5%), `regex:TIME` 9 tokens (0.5%).
+
 ## Synthetic prompt benchmark
 
 - Dev templates: 5000 prompts, strict F1 67.9%, relaxed F1 90.1%, consistency 96.4%.
