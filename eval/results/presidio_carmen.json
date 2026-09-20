@@ -1,0 +1,164 @@
+{
+  "script": "eval/carmen.py",
+  "generated": "2026-09-20T07:53:47.039789Z",
+  "code_revision": "fceec148091506c754bf68b3219690939ba0ae8c",
+  "dirty": false,
+  "mode": "presidio",
+  "presidio_meta": {
+    "versions": {
+      "presidio_analyzer": "2.2.364",
+      "spacy": "3.8.16"
+    },
+    "spacy_model": "es_core_news_lg",
+    "mapping": "PRESIDIO_TO_UNIFIED (full)",
+    "unmapped_entity_types": [
+      "IP_ADDRESS",
+      "ORGANIZATION"
+    ]
+  },
+  "model": null,
+  "seed": 42,
+  "documents": 2000,
+  "word_level": {
+    "precision": 0.199,
+    "recall": 0.386,
+    "f1": 0.2626,
+    "f1_ci95": [
+      0.1888,
+      0.2119
+    ]
+  },
+  "span_strict": {
+    "precision": 0.1701,
+    "recall": 0.3701,
+    "f1": 0.2331
+  },
+  "span_relaxed": {
+    "precision": 0.196,
+    "recall": 0.4264,
+    "f1": 0.2686,
+    "f1_ci95": [
+      0.1968,
+      0.2193
+    ]
+  },
+  "per_class": {
+    "AGE": {
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "support": 815
+    },
+    "DATE": {
+      "precision": 0.9493293591654247,
+      "recall": 0.47307835128109915,
+      "f1": 0.6314745972738538,
+      "support": 5386
+    },
+    "FAMILY": {
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "support": 299
+    },
+    "HOSPITAL": {
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "support": 368
+    },
+    "ID": {
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "support": 243
+    },
+    "LOCATION": {
+      "precision": 0.015417106652587118,
+      "recall": 0.6347826086956522,
+      "f1": 0.030103092783505155,
+      "support": 230
+    },
+    "NAME": {
+      "precision": 0.00036423238025860496,
+      "recall": 0.013245033112582781,
+      "f1": 0.0007089684509039348,
+      "support": 151
+    },
+    "ORGANIZATION": {
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "support": 129
+    },
+    "OTHER": {
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "support": 38
+    },
+    "PHONE": {
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "support": 22
+    },
+    "PROFESSION": {
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "support": 91
+    },
+    "SEX": {
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "support": 458
+    },
+    "URL": {
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "support": 1
+    }
+  },
+  "phi_neutralization": {
+    "covered_spans": 3532,
+    "total_spans": 8231,
+    "rate": 0.4291,
+    "ci95": [
+      0.3255,
+      0.3611
+    ]
+  },
+  "leakage": {
+    "wide": {
+      "leaked_docs": 298,
+      "total_docs": 2000,
+      "rate": 0.149,
+      "ci95": [
+        0.133,
+        0.1645
+      ]
+    },
+    "direct": {
+      "leaked_docs": 168,
+      "total_docs": 2000,
+      "rate": 0.084,
+      "ci95": [
+        0.072,
+        0.0965
+      ]
+    },
+    "any_phi": {
+      "leaked_docs": 1159,
+      "total_docs": 2000,
+      "rate": 0.5795,
+      "ci95": [
+        0.559,
+        0.6005
+      ]
+    }
+  },
+  "note": "Presidio standalone baseline (es_core_news_lg, full PRESIDIO_TO_UNIFIED), same evaluator as Pukara."
+}
