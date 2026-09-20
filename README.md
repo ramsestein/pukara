@@ -6,7 +6,7 @@
 
 [![CI](https://github.com/ramsestein/pukara/actions/workflows/ci.yml/badge.svg)](https://github.com/ramsestein/pukara/actions/workflows/ci.yml)
 [![Python](https://img.shields.io/badge/Python-3.9%2B-blue)]()
-[![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
+[![License](https://img.shields.io/badge/License-MIT-green)](docs/LICENSE)
 [![Version](https://img.shields.io/badge/Version-0.2.0-orange)]()
 
 A privacy-first, self-hosted gateway for local large language models
@@ -24,7 +24,7 @@ resilient stronghold around your model.
 |---|---|
 | Name | Pukara |
 | Version | 0.2.0 |
-| License | [MIT](LICENSE) |
+| License | [MIT](docs/LICENSE) |
 | Language | Python 3.9+ |
 | Dependencies | `cryptography`, `numpy` (core); `torch`, `transformers`, `huggingface_hub` (client) |
 | Repository | https://github.com/ramsestein/pukara |
@@ -146,5 +146,5 @@ If you use Pukara, please cite it using [`CITATION.cff`](docs/CITATION.cff).
 
 ## License
 
-MIT. See [`LICENSE`](LICENSE).
+MIT. See [`LICENSE`](docs/LICENSE).
 

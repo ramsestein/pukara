@@ -18,4 +18,3 @@ run_client.sh
 conftest.py
 pytest.ini
 requirements*.txt
-LICENSE
