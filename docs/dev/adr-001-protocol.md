@@ -90,7 +90,7 @@ lack of forward secrecy becomes unacceptable.
 ## Consequences
 
 - v2 breaks v1 with no backward-compatible fallback (a fallback would be a
-  downgrade vector). Version bump to `0.2.0`, recorded in `CHANGELOG.md`.
+  downgrade vector). Version bump to `0.2.0`, recorded in `docs/CHANGELOG.md`.
 - `ENCRYPTION_SECRET` changes format (base64 of ≥ 32 bytes); old secrets are
   rejected at startup.
 - Clients and servers must be deployed together.

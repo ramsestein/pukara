@@ -110,6 +110,10 @@ def main() -> int:
             "_Person names are merged into `NAME` (any person name gets the same "
             "pseudonymisation treatment); see `eval/PROTOCOL.md`._",
             "",
+            "_Residual classes below 10% F1: `ORGANIZATION` has no dedicated regex "
+            "rule and the CARMEN-trained BERT predicts few organizations (low "
+            "support); `TIME` and `URL` have zero gold support in MEDDOCAN._",
+            "",
             "### Ablation on dev (not reportable; shows how the configuration was chosen)",
             "",
             "| Configuration | Word F1 | Relaxed F1 | Neutralization | Wide leakage |",

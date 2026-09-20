@@ -1,7 +1,7 @@
 # Pukara
 
 <p align="center">
-  <img src="image.png" alt="Pukara logo" width="220">
+  <img src="docs/image.png" alt="Pukara logo" width="220">
 </p>
 
 [![CI](https://github.com/ramsestein/pukara/actions/workflows/ci.yml/badge.svg)](https://github.com/ramsestein/pukara/actions/workflows/ci.yml)
@@ -142,7 +142,7 @@ and `pip-audit`.
 
 ## Citation
 
-If you use Pukara, please cite it using [`CITATION.cff`](CITATION.cff).
+If you use Pukara, please cite it using [`CITATION.cff`](docs/CITATION.cff).
 
 ## License
 

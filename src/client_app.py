@@ -352,7 +352,7 @@ class ClientApp:
 
     # ── Helpers UI ────────────────────────────────────────────────────────
     def _set_icon(self):
-        icon_path = ROOT / "image.png"
+        icon_path = ROOT / "docs" / "image.png"
         if icon_path.exists():
             try:
                 self._icon = tk.PhotoImage(file=str(icon_path))

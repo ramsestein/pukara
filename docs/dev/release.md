@@ -38,7 +38,7 @@ truth), currently `0.2.0`.
 
 - The repository must be linked to a Zenodo record (GitHub ↔ Zenodo
   integration).
-- `CITATION.cff` and `.zenodo.json` carry `TODO` markers for ORCIDs and the
+- `docs/CITATION.cff` and `docs/.zenodo.json` carry `TODO` markers for ORCIDs and the
   SoftwareX DOI; fill them before archiving.
 - Draft a new version in Zenodo for tag `v0.2.0`, verify the metadata (authors,
   MIT license, version 0.2.0) and publish. The DOI is then added to the README
