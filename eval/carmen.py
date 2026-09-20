@@ -42,7 +42,7 @@ def load_carmen_docs(corpus: Path):
 def main() -> int:
     parser = argparse.ArgumentParser(description="CARMEN-I evaluation (secondary)")
     parser.add_argument("--corpus", default="data/carmen")
-    parser.add_argument("--mode", choices=["regex", "bert", "combined"],
+    parser.add_argument("--mode", choices=["regex", "bert", "combined", "presidio"],
                         default="combined")
     parser.add_argument("--out", default="eval/results/carmen_pukara.json")
     parser.add_argument("--seed", type=int, default=42)
@@ -53,6 +53,13 @@ def main() -> int:
     if not docs:
         print("[carmen] No se encontraron documentos", file=sys.stderr)
         return 2
+
+    if args.mode == "presidio":
+        from src import presidio
+        if not presidio.available():
+            print("[carmen] Presidio no está disponible (spaCy es_core_news_lg).",
+                  file=sys.stderr)
+            return 2
 
     predictor = common.Predictor(args.mode)
 
@@ -144,12 +151,18 @@ def main() -> int:
             "support": tp + fn,
         }
 
+    presidio_meta = None
+    if args.mode == "presidio":
+        presidio_meta = common.presidio_meta([t for _, t, _g in docs])
+
     result = {
         "script": "eval/carmen.py",
         "generated": datetime.datetime.utcnow().isoformat() + "Z",
         "code_revision": git_revision(),
+        "dirty": common.dirty(),
         "mode": args.mode,
-        "model": common.MODEL_META,
+        "presidio_meta": presidio_meta,
+        "model": common.MODEL_META if args.mode != "presidio" else None,
         "seed": args.seed,
         "documents": len(docs),
         "word_level": {
@@ -193,8 +206,13 @@ def main() -> int:
                         "ci95": [round(x, 4) for x in common.bootstrap_ci(
                             per_doc_leak_any, n=args.bootstrap, seed=args.seed)]},
         },
-        "note": "Pukara: the BERT model is fine-tuned on CARMEN-I; in-distribution, "
-                "possible train overlap, upper bound.",
+        "note": (
+            "Presidio standalone baseline (es_core_news_lg, full PRESIDIO_TO_UNIFIED), "
+            "same evaluator as Pukara."
+            if args.mode == "presidio"
+            else "Pukara: the BERT model is fine-tuned on CARMEN-I; in-distribution, "
+                 "possible train overlap, upper bound."
+        ),
     }
 
     out = Path(args.out)

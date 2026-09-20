@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import random
 import re
+import subprocess
 import sys
 from pathlib import Path
 
@@ -263,3 +264,49 @@ def bootstrap_ci(values: list, n: int = 1000, seed: int = 42) -> tuple:
         means.append(sum(sample) / size)
     means.sort()
     return means[int(0.025 * (n - 1))], means[int(0.975 * (n - 1))]
+
+
+def dirty() -> bool:
+    """True si el árbol git tiene cambios sin commitear (porcelain no vacío).
+
+    Los JSON de resultados lo registran como `dirty` para que ninguna cifra se
+    pueda producir sobre un árbol sucio sin quedar señalado.
+    """
+    try:
+        out = subprocess.check_output(
+            ["git", "status", "--porcelain"], cwd=ROOT, text=True
+        )
+        return bool(out.strip())
+    except Exception:  # noqa: BLE001
+        return True
+
+
+def presidio_meta(sample_texts: list) -> dict:
+    """Metadato del baseline Presidio standalone (solo lectura, no toca el detector).
+
+    Recoge las versiones de Presidio/spaCy y las clases de Presidio que quedan
+    **sin mapear** al conjunto unificado (los `entity_type` crudos observados en
+    una muestra que no están en `PRESIDIO_TO_UNIFIED`).
+    """
+    import importlib.metadata as md
+
+    from src import presidio
+
+    versions = {}
+    for dist, pkg in (("presidio-analyzer", "presidio_analyzer"), ("spacy", "spacy")):
+        try:
+            versions[pkg] = md.version(dist)
+        except Exception:  # noqa: BLE001
+            versions[pkg] = "unknown"
+
+    seen = set()
+    for text in sample_texts:
+        for r in presidio._analyze(text):  # noqa: SLF001 (metadato de eval)
+            seen.add(r.entity_type)
+    unmapped = sorted(seen - set(presidio.PRESIDIO_TO_UNIFIED))
+    return {
+        "versions": versions,
+        "spacy_model": "es_core_news_lg",
+        "mapping": "PRESIDIO_TO_UNIFIED (full)",
+        "unmapped_entity_types": unmapped,
+    }

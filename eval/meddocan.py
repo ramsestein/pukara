@@ -184,12 +184,18 @@ def main() -> int:
     direct_ci = common.bootstrap_ci(per_doc_leak_direct, n=args.bootstrap, seed=args.seed)
     any_ci = common.bootstrap_ci(per_doc_leak_any, n=args.bootstrap, seed=args.seed)
 
+    presidio_meta = None
+    if args.mode == "presidio":
+        presidio_meta = common.presidio_meta([t for _, t, _g in docs])
+
     result = {
         "script": "eval/meddocan.py",
         "generated": datetime.datetime.utcnow().isoformat() + "Z",
         "code_revision": git_revision(),
+        "dirty": common.dirty(),
         "mode": args.mode,
         "presidio": (args.mode == "combined" and args.presidio),
+        "presidio_meta": presidio_meta,
         "model": common.MODEL_META if args.mode in ("bert", "combined") else None,
         "seed": args.seed,
         "splits": splits,

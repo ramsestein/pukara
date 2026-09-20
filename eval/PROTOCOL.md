@@ -159,9 +159,10 @@ ganan BERT+regex).
 `dev`, el criterio (§4, F1 relajado con leakage amplio de desempate) elige
 **BERT + regex sin Presidio**: F1 relajado 0,7997 (frente a 0,7478 con
 Presidio), word F1 0,8548 (frente a 0,8198), leakage amplio 0,104 (frente a
-0,084). Presidio baja la F1 por sobre-redacción de `es_core_news_lg`. Como el
-caso de uso de Pukara asume texto ya pseudoanonimizado (nombres/edad del
-paciente retirados), la mejora marginal de leakage no compensa la bajada de F1.
+0,084). Presidio baja la F1 por sobre-redacción de `es_core_news_lg`. El
+criterio preinscrito (§4) decide por sí solo la configuración (F1 relajado en
+`dev`, con leakage amplio de desempate), sin asumir ninguna premisa sobre el
+texto de entrada.
 Por tanto:
 
 - **Configuración congelada en `eval-frozen-v2`:** BERT + regex, Presidio **off**
@@ -169,13 +170,23 @@ Por tanto:
 - **Presidio se mantiene como extra accionable** para las entidades clave
   (nombre, email, país).
 
-**Baseline standalone (Fase F2).** El baseline Presidio standalone **no se
-re-ejecuta**: se referencia el repositorio existente `ramsestein/presidio_carmen`
-(spaCy `es_core_news_lg` + reconocedores por defecto y personalizados de ese
-repo) y se citan sus cifras. La integración opcional en el pipeline usa solo
+**Baseline standalone (tercera pasada).** La fila "Presidio" de las tablas se
+genera **con este mismo evaluador** desde `eval/results/presidio_meddocan.json`
+y `eval/results/presidio_carmen.json` (`python -m eval.meddocan --mode presidio`
+y `python -m eval.carmen --mode presidio`): misma tokenización y mismas métricas
+que Pukara (palabra, span estricto/relajado, neutralización, leakage amplio y
+directo, IC bootstrap con semilla 42), spaCy `es_core_news_lg` y el mapeo
+completo `PRESIDIO_TO_UNIFIED` de `src/presidio.py`. Las clases de Presidio que
+quedan **sin mapear** se documentan en el campo `presidio_meta.unmapped_entity_types`
+de cada JSON. La integración opcional en el pipeline usa solo
 `PERSON`/`EMAIL_ADDRESS`/`LOCATION` (tabla de arriba); el mapeo completo al
 conjunto unificado para referencias externas está en `src/presidio.py`
 (`PRESIDIO_TO_UNIFIED`).
+
+El repositorio de origen `ramsestein/presidio_carmen` se cita **solo** como
+evaluación de referencia, no como baseline de la tabla: usó `es_core_news_md`
+sobre 1.000 documentos con Jaccard de caracteres, por lo que **no es comparable
+fila a fila** con las cifras de este protocolo.
 
 Neutralización y leakage de Presidio (integración y baseline) se calculan **sin
 depender de la etiqueta**, con el mismo evaluador que Pukara.
