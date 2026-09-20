@@ -1,41 +1,42 @@
 {
   "script": "eval/cost.py",
-  "generated": "2026-09-19T08:12:32.775026Z",
-  "code_revision": "86e166302698c0b21052f3de840ea6be6ec34b12",
+  "generated": "2026-09-20T06:02:36.181029Z",
+  "code_revision": "75155c0d186a49c9233f025e870323a4e085020f",
   "mode": "combined",
   "hardware": {
     "cpu": "Intel64 Family 6 Model 198 Stepping 2, GenuineIntel",
     "platform": "Windows-10-10.0.26200-SP0"
   },
   "anonymization_latency_ms": {
-    "documents": 30,
-    "p50": 827.1039,
-    "p95": 1175.8449
+    "documents": 100,
+    "p50": 1226.9908,
+    "p95": 2550.2217
   },
   "encryption_ms": [
     {
       "size_bytes": 64,
-      "p50_ms": 0.0346,
-      "p95_ms": 0.0571
-    },
-    {
-      "size_bytes": 1024,
-      "p50_ms": 0.0446,
-      "p95_ms": 0.0583
-    },
-    {
-      "size_bytes": 4096,
-      "p50_ms": 0.0747,
+      "p50_ms": 0.0646,
       "p95_ms": 0.0946
     },
     {
+      "size_bytes": 1024,
+      "p50_ms": 0.0504,
+      "p95_ms": 0.0626
+    },
+    {
+      "size_bytes": 4096,
+      "p50_ms": 0.0822,
+      "p95_ms": 0.0941
+    },
+    {
       "size_bytes": 16384,
-      "p50_ms": 0.1927,
-      "p95_ms": 0.2349
+      "p50_ms": 0.2123,
+      "p95_ms": 0.28
     }
   ],
-  "client_peak_memory_bytes": 220674,
+  "client_peak_memory_bytes": 529030,
   "notes": [
-    "Anonymization latency measured over the full pipeline (BERT + regex when mode=combined) on CPU."
+    "Anonymization latency measured over the full pipeline (BERT + regex when mode=combined) on CPU.",
+    "Peak memory is tracemalloc (Python allocations only); it does not include the ~473 MB of BERT weights held by torch."
   ]
 }

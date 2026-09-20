@@ -244,7 +244,7 @@ class CollapsibleSection(ttk.Frame):
 class ClientApp:
     def __init__(self, root):
         self.root = root
-        self.root.title("Pukara v1.0 - Secure Ollama")
+        self.root.title("Pukara v0.2.0 - Secure Ollama")
         self._set_icon()
         self.env = load_env()
         self.ollama_proc = None

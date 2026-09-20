@@ -69,8 +69,10 @@ def main() -> int:
     per_doc_leak_any = []
     per_doc_neutr = []
 
-    for _name, text, gold in docs:
+    for idx, (_name, text, gold) in enumerate(docs):
         pred = predictor.detect(text)
+        if (idx + 1) % 100 == 0:
+            print(f"[carmen] {idx + 1}/{len(docs)}", flush=True)
         tokens = [(m.start(), m.end()) for m in re.finditer(r"\S+", text)]
         gold_tok = {i for i, (s, e) in enumerate(tokens)
                     if any(s < g["end"] and g["start"] < e for g in gold)}

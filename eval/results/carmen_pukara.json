@@ -1,0 +1,161 @@
+{
+  "script": "eval/carmen.py",
+  "generated": "2026-09-20T05:45:45.697626Z",
+  "code_revision": "75155c0d186a49c9233f025e870323a4e085020f",
+  "mode": "combined",
+  "model": {
+    "repo": "BSC-NLP4BIA/bsc-bio-ehr-es-carmen-anon",
+    "revision": "83db1112c37c7ef527a9ba6d6b4d1be18b4bca9b",
+    "weights_sha256": "a8b2976c284b72db42adf97df8d5a1609ca477f3abdae71a5d201d4d3ff89acd"
+  },
+  "seed": 42,
+  "documents": 2000,
+  "word_level": {
+    "precision": 0.7763,
+    "recall": 0.9217,
+    "f1": 0.8428,
+    "f1_ci95": [
+      0.6658,
+      0.6999
+    ]
+  },
+  "span_strict": {
+    "precision": 0.6943,
+    "recall": 0.8193,
+    "f1": 0.7516
+  },
+  "span_relaxed": {
+    "precision": 0.7976,
+    "recall": 0.9413,
+    "f1": 0.8635,
+    "f1_ci95": [
+      0.6695,
+      0.7039
+    ]
+  },
+  "per_class": {
+    "AGE": {
+      "precision": 0.7851485148514852,
+      "recall": 0.9730061349693252,
+      "f1": 0.869041095890411,
+      "support": 815
+    },
+    "DATE": {
+      "precision": 0.7778376436781609,
+      "recall": 0.8041217972521352,
+      "f1": 0.7907613657111557,
+      "support": 5386
+    },
+    "FAMILY": {
+      "precision": 0.6651053864168618,
+      "recall": 0.9498327759197325,
+      "f1": 0.7823691460055097,
+      "support": 299
+    },
+    "HOSPITAL": {
+      "precision": 0.9150141643059491,
+      "recall": 0.8777173913043478,
+      "f1": 0.8959778085991679,
+      "support": 368
+    },
+    "ID": {
+      "precision": 0.7205240174672489,
+      "recall": 0.6790123456790124,
+      "f1": 0.6991525423728814,
+      "support": 243
+    },
+    "LOCATION": {
+      "precision": 0.8702928870292888,
+      "recall": 0.9043478260869565,
+      "f1": 0.8869936034115139,
+      "support": 230
+    },
+    "NAME": {
+      "precision": 0.10463733650416171,
+      "recall": 0.5827814569536424,
+      "f1": 0.1774193548387097,
+      "support": 151
+    },
+    "ORGANIZATION": {
+      "precision": 0.8495575221238938,
+      "recall": 0.7441860465116279,
+      "f1": 0.7933884297520661,
+      "support": 129
+    },
+    "OTHER": {
+      "precision": 0.19333333333333333,
+      "recall": 0.7631578947368421,
+      "f1": 0.30851063829787234,
+      "support": 38
+    },
+    "PHONE": {
+      "precision": 0.7894736842105263,
+      "recall": 0.6818181818181818,
+      "f1": 0.7317073170731707,
+      "support": 22
+    },
+    "PROFESSION": {
+      "precision": 0.875,
+      "recall": 0.8461538461538461,
+      "f1": 0.8603351955307262,
+      "support": 91
+    },
+    "SEX": {
+      "precision": 0.7135922330097088,
+      "recall": 0.6419213973799127,
+      "f1": 0.6758620689655173,
+      "support": 458
+    },
+    "TIME": {
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "support": 0
+    },
+    "URL": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "support": 1
+    }
+  },
+  "phi_neutralization": {
+    "covered_spans": 7815,
+    "total_spans": 8231,
+    "rate": 0.9495,
+    "ci95": [
+      0.7308,
+      0.7677
+    ]
+  },
+  "leakage": {
+    "wide": {
+      "leaked_docs": 40,
+      "total_docs": 2000,
+      "rate": 0.02,
+      "ci95": [
+        0.014,
+        0.0265
+      ]
+    },
+    "direct": {
+      "leaked_docs": 37,
+      "total_docs": 2000,
+      "rate": 0.0185,
+      "ci95": [
+        0.0125,
+        0.025
+      ]
+    },
+    "any_phi": {
+      "leaked_docs": 179,
+      "total_docs": 2000,
+      "rate": 0.0895,
+      "ci95": [
+        0.0775,
+        0.1015
+      ]
+    }
+  },
+  "note": "Pukara: the BERT model is fine-tuned on CARMEN-I; in-distribution, possible train overlap, upper bound."
+}
