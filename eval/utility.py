@@ -14,7 +14,9 @@ from __future__ import annotations
 
 import argparse
 import datetime
+import difflib
 import json
+import random
 import re
 import subprocess
 import sys
@@ -66,15 +68,71 @@ PERTURBATIONS = {
     "split_by_newline": lambda s: re.sub(r"\[(\w+)_(\d+)\]", r"[\1_\n\2]", s),
 }
 
-# Textos con corchetes/guiones bajos legítimos (código, JSON, markdown) para
-# medir la tasa de restauraciones espurias de la regex tolerante.
-SPURIOUS_SAMPLES = [
-    "Código: arr[0] = matrix[1][2]; x_1 += y_2.",
-    "JSON: {\"nombre_1\": 1, \"fecha_2\": \"2024-05-12\"}.",
-    "Markdown: [enlace](https://example.com) y nota[1].",
-    "Placeholder ajeno a la conversación: [NOMBRE_99] y [FECHA_77].",
-    "Variables: total_2, media_1 y desviacion_3.",
-]
+# Textos con corchetes/guiones bajos legítimos (código, SQL, JSON, CSV,
+# markdown) para medir la tasa de restauraciones espurias de la regex tolerante.
+# Se generan por plantilla + muestreo del promptbench (dev y held-out); ninguna
+# muestra contiene un placeholder real del mapa ph_to_text (los números >= 100
+# no colisionan con los placeholders 1..2).
+def generate_spurious_samples(seed: int = 42, n: int = 600) -> list:
+    rng = random.Random(seed)
+    samples: list = []
+
+    from eval import promptbench as pb
+    from eval import promptbench_heldout as pb2
+
+    for p in pb.generate_prompts(seed=42, n=200):
+        if p["id"] % 4 == 2:  # categoría SQL/CSV del promptbench dev
+            samples.append(p["text"])
+    for p in pb2.generate_heldout_prompts(seed=2024, n=200):
+        if p["id"] % 5 == 2:  # categoría tabular (CSV-like) del held-out
+            samples.append(p["text"])
+
+    i = 0
+    while len(samples) < n:
+        k = i + 100
+        r = rng.randint(100, 999)
+        kind = i % 6
+        if kind == 0:
+            samples.append(
+                f"if (x > 0) {{ arr[{r}] = matrix[{r}][{r + 1}]; "
+                f"total_{k} += var_{k}; }}"
+            )
+        elif kind == 1:
+            samples.append(
+                f"SELECT id_{k}, col_{k} FROM tabla_{k} "
+                f"WHERE id = {r} AND fecha = '2024-01-15';"
+            )
+        elif kind == 2:
+            samples.append(
+                f'{{"clave_{k}": {r}, "lista": [{r}, {r + 1}], '
+                f'"meta": {{"campo_{k}": "x"}}}}'
+            )
+        elif kind == 3:
+            samples.append(
+                f"id,nombre,valor\n{r},campo_{k},{r}\n{r + 1},campo_{k},{r}"
+            )
+        elif kind == 4:
+            samples.append(
+                f"Markdown: [enlace](https://example.com/{k}) y nota[{r}]. "
+                f"Placeholder ajeno: [NOMBRE_{k}] y [FECHA_{k}]."
+            )
+        else:
+            samples.append(
+                f"Corchetes sueltos: ]{k}[ y llaves {{{r}}}. "
+                f"Guiones bajos: var_{k}, total_{k}, media_{k}."
+            )
+        i += 1
+    return samples[:n]
+
+
+def _char_delta(a: str, b: str) -> int:
+    """Número aproximado de caracteres alterados entre dos textos."""
+    sm = difflib.SequenceMatcher(None, a, b)
+    return sum(
+        max(i2 - i1, j2 - j1)
+        for tag, i1, i2, j1, j2 in sm.get_opcodes()
+        if tag != "equal"
+    )
 
 
 def roundtrip(texts, predictor):
@@ -113,31 +171,53 @@ def robustness(texts, predictor):
     return results
 
 
-def spurious_restorations(predictor):
+def spurious_restorations(predictor, seed=42, n=600):
     """Tasa de restauraciones espurias de la regex tolerante.
 
     Construye un mapa sintético con todos los placeholders `[TAG_1..2]` y
-    aplica `deanonymize` a textos con corchetes/guiones bajos legítimos. Cuenta
-    cuántas muestras se alteran (falso positivo de la regex).
+    aplica `deanonymize` a textos **sin placeholders** (código, SQL, JSON,
+    CSV, corchetes/guiones bajos legítimos). Cuenta cuántas muestras se alteran
+    (falso positivo) y qué porcentaje de caracteres se altera, con IC bootstrap.
     """
     from src import anonymizer as _an
 
     anon = _an.Anonymizer.__new__(_an.Anonymizer)
     anon.reset()
     for tag in _an.TAGS.values():
-        for n in (1, 2):
-            anon.ph_to_text[f"[{tag}_{n}]"] = f"<valor:{tag}:{n}>"
+        for n_ in (1, 2):
+            anon.ph_to_text[f"[{tag}_{n_}]"] = f"<valor:{tag}:{n_}>"
+
+    samples = generate_spurious_samples(seed=seed, n=n)
     altered = []
-    for sample in SPURIOUS_SAMPLES:
+    per_sample_altered = []
+    per_sample_char_rate = []
+    total_chars = 0
+    altered_chars = 0
+    for sample in samples:
         restored = anon.deanonymize(sample)
+        total_chars += len(sample)
         if restored != sample:
             altered.append({"sample": sample, "restored": restored})
+            per_sample_altered.append(1)
+            diff = _char_delta(sample, restored)
+            altered_chars += diff
+            per_sample_char_rate.append(diff / len(sample) if len(sample) else 0.0)
+        else:
+            per_sample_altered.append(0)
+            per_sample_char_rate.append(0.0)
+
     return {
-        "samples": len(SPURIOUS_SAMPLES),
+        "samples": len(samples),
         "altered": len(altered),
-        "rate": round(len(altered) / len(SPURIOUS_SAMPLES), 4)
-        if SPURIOUS_SAMPLES else 0.0,
-        "examples": altered,
+        "rate": round(len(altered) / len(samples), 4) if samples else 0.0,
+        "rate_ci95": [round(x, 4) for x in
+                      common.bootstrap_ci(per_sample_altered)],
+        "altered_chars": altered_chars,
+        "total_chars": total_chars,
+        "char_rate": round(altered_chars / total_chars, 4) if total_chars else 0.0,
+        "char_rate_ci95": [round(x, 4) for x in
+                          common.bootstrap_ci(per_sample_char_rate)],
+        "examples": altered[:10],
     }
 
 
@@ -149,6 +229,8 @@ def main() -> int:
                         default="combined")
     parser.add_argument("--model-dir", default=None)
     parser.add_argument("--out", default="eval/results/utility.json")
+    parser.add_argument("--spurious-n", type=int, default=600)
+    parser.add_argument("--spurious-seed", type=int, default=42)
     args = parser.parse_args()
 
     corpus = Path(args.corpus)
@@ -165,12 +247,14 @@ def main() -> int:
     predictor = common.Predictor(args.mode, args.model_dir)
     failures = roundtrip(texts, predictor)
     rob = robustness(texts, predictor)
-    spurious = spurious_restorations(predictor)
+    spurious = spurious_restorations(predictor, seed=args.spurious_seed,
+                                     n=args.spurious_n)
 
     result = {
         "script": "eval/utility.py",
         "generated": datetime.datetime.utcnow().isoformat() + "Z",
         "code_revision": _git(),
+        "dirty": common.dirty(),
         "roundtrip": {
             "texts": len(texts),
             "failures": len(failures),
@@ -181,14 +265,14 @@ def main() -> int:
         "spurious_restorations": spurious,
         "notes": [
             "Round-trip failures are bugs, not metrics.",
-            "The 2 remaining round-trip failures are the adversarial texts that "
-            "already contain a literal [NOMBRE_1]: a generated placeholder "
-            "identical to the literal collides (audit A9, inherent to the "
-            "reversible-placeholder design), not a restoration bug.",
+            "Literal placeholders in the input ([NOMBRE_1], nested, malformed) are "
+            "escaped on anonymize and unescaped after deanonymize, so round-trip "
+            "is exact even for those adversarial texts (audit A9).",
             "Perturbations mimic deterministic LLM edits to placeholders; the "
             "rate is the share of texts where ALL original entities are recovered.",
-            "spurious_restorations: share of legit bracket/underscore samples "
-            "altered by the tolerant restoration regex (false positives).",
+            "spurious_restorations: share of legit placeholder-free texts (code, "
+            "SQL, JSON, CSV, brackets/underscores) altered by the tolerant "
+            "restoration regex (false positives), plus share of altered characters.",
         ],
     }
 

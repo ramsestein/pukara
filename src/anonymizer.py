@@ -203,6 +203,56 @@ def _restore_placeholder(text: str, ph: str, orig: str) -> str:
     return pat.sub(orig, text)
 
 
+# ── Escape de placeholders literales (round-trip exacto) ──────────────────
+# Si el texto original ya contiene un placeholder literal (p. ej. [NOMBRE_1],
+# anidado [[NOMBRE_1]] o mal formado [NOMBRE_1), `deanonymize` lo confundiría
+# con un placeholder generado. Para que el round-trip sea exacto en esos casos,
+# `anonymize` sustituye esos literales por marcadores de uso privado (PUA) que
+# ni el detector ni la regex de restauración pueden producir ni alterar, y
+# `deanonymize` los restaura al final. Esto no afecta a la detección (regex,
+# umbral, lista blanca y mapeo quedan intactos): solo envuelve anonimizar y
+# restaurar.
+_ESC_OPEN = "\ue000"
+_ESC_CLOSE = "\ue001"
+
+_ESCAPE_ALTS = sorted(
+    {a for aliases in _TAG_ALIASES.values() for a in aliases}, key=len, reverse=True
+)
+_ESCAPE_TAG = "(?:" + "|".join(re.escape(a) for a in _ESCAPE_ALTS) + ")"
+_LITERAL_PLACEHOLDER = re.compile(
+    r"\*{0,2}(?:"
+    + r"\[\s*" + _ESCAPE_TAG + r"[\s_]*\d+(?!\d)\s*\](?-i:'s|s)?"
+    + r"|"
+    + r"\[\s*" + _ESCAPE_TAG + r"[\s_]*\d+(?!\d)"
+    + r"|"
+    + r"(?<![A-Za-z0-9])" + _ESCAPE_TAG + r"[\s_]*\d+(?!\d)\s*\]?"
+    + r")\*{0,2}",
+    re.IGNORECASE,
+)
+
+
+def _escape_literal_placeholders(text: str) -> tuple:
+    """Protege los placeholders literales de la entrada frente a la restauración.
+
+    Devuelve `(texto_con_marcadores, {marcador: literal})`.
+    """
+    escapes: dict = {}
+
+    def _sub(m):
+        marker = f"{_ESC_OPEN}{len(escapes)}{_ESC_CLOSE}"
+        escapes[marker] = m.group(0)
+        return marker
+
+    return _LITERAL_PLACEHOLDER.sub(_sub, text), escapes
+
+
+def _unescape_literal_placeholders(text: str, escapes: dict) -> str:
+    """Restaura los placeholders literales protegidos al final de `deanonymize`."""
+    for marker, literal in escapes.items():
+        text = text.replace(marker, literal)
+    return text
+
+
 def _map_bert_label(label: str) -> str:
     base = label.split("-")[-1]
     if base == "ANON":
@@ -500,6 +550,7 @@ class Anonymizer:
         self.text_to_ph = {}   # real text -> placeholder (consistency)
         self.ph_to_text = {}   # placeholder -> real text (reversal)
         self.counters = {}     # tag -> counter
+        self.escapes = {}      # marcador -> placeholder literal (escape)
 
     # ── Detección BERT ────────────────────────────────────────────────────
     def _bert_detect(self, text: str) -> list[dict]:
@@ -805,6 +856,7 @@ class Anonymizer:
 
     # ── Anonimización reversible ───────────────────────────────────────────
     def anonymize(self, text: str) -> str:
+        text, self.escapes = _escape_literal_placeholders(text)
         for e in sorted(self.detect(text), key=lambda x: x["start"], reverse=True):
             orig = e["text"]
             ph = self.text_to_ph.get(orig)
@@ -824,6 +876,9 @@ class Anonymizer:
         # seguido de más alfanuméricos).
         for ph, orig in sorted(self.ph_to_text.items(), key=lambda kv: _ph_num(kv[0]), reverse=True):
             text = _restore_placeholder(text, ph, orig)
+        escapes = getattr(self, "escapes", {})
+        if escapes:
+            text = _unescape_literal_placeholders(text, escapes)
         return text
 
 

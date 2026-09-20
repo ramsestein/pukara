@@ -80,3 +80,36 @@ def test_roundtrip_propiedad(base):
     x = base + " Paciente: María García López, tel 600123456."
     out = anon.anonymize(x)
     assert anon.deanonymize(out) == x
+
+
+def test_roundtrip_placeholders_literales():
+    """Round-trip exacto cuando el texto ya contiene placeholders literales.
+
+    Un placeholder generado (p. ej. [NOMBRE_1]) no debe confundirse con un
+    literal igual, anidado o mal formado presente en la entrada.
+    """
+    anon = _make_anon()
+    for x in [
+        "Paciente: María García [NOMBRE_1] literal.",
+        "Paciente: María García [[NOMBRE_1]] y [NOMBRE_2].",
+        "Paciente: María García [NOMBRE_1",
+        "Paciente: María García NOMBRE_1] y **[NOMBRE_1]**.",
+        "Paciente: María García [ NOMBRE _ 1 ] y [NOMBRE_1]s.",
+    ]:
+        out = anon.anonymize(x)
+        assert anon.deanonymize(out) == x, x
+
+
+@settings(max_examples=200)
+@given(st.text(
+    alphabet=st.characters(whitelist_categories=("Ll", "Lu", "Nd"),
+                           whitelist_characters=" []_*"),
+    max_size=80,
+))
+def test_roundtrip_placeholders_literales_propiedad(base):
+    """Propiedad: round-trip exacto con placeholders literales, anidados y
+    mal formados generados por Hypothesis."""
+    anon = _make_anon()
+    x = base + " Paciente: María García López, tel 600123456."
+    out = anon.anonymize(x)
+    assert anon.deanonymize(out) == x
