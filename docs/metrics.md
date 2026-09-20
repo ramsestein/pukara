@@ -18,42 +18,41 @@ are produced by scripts in `eval/` and versioned under `eval/results/`.
 
 ## MEDDOCAN test (out-of-distribution, single run)
 
-- Mode: `combined`; documents: 250;
-  revision `b69ddd6eb202`.
+_Rows: **Pukara** (`meddocan.json`) and the **Presidio standalone baseline** (`presidio_meddocan.json`), same evaluator, same metrics._
 
-| Level | Precision | Recall | F1 | F1 CI95 |
-|---|---|---|---|---|
-| Word | 84.7% | 84.2% | 84.4% | 83.9%–85.5% |
-| Span strict | 57.1% | 61.5% | 59.2% | — |
-| Span relaxed | 80.6% | 86.7% | 83.6% | 83.2%–84.8% |
+| Metric | Pukara | Presidio |
+|---|---|---|
+| Word F1 | 84.4% (CI 83.9%–85.5%) | 59.1% (CI 57.9%–59.9%) |
+| Span strict F1 | 59.2% | 43.7% |
+| Span relaxed F1 | 83.6% (CI 83.2%–84.8%) | 59.1% (CI 58.4%–60.4%) |
+| PHI neutralization | 88.6% (CI 88.2%–90.0%) | 56.2% (CI 55.5%–57.2%) |
+| Leakage wide | 11.2% (CI 7.2%–15.2%) | 100.0% (CI 100.0%–100.0%) |
+| Leakage direct | 7.2% (CI 4.4%–10.4%) | 100.0% (CI 100.0%–100.0%) |
 
-**PHI neutralization** (label-agnostic): 5015 / 5661 gold PHI spans covered by at least one prediction (88.6%, CI 88.2%–90.0%).
+- Pukara revision `b69ddd6eb202`, Presidio revision `31ccec3edeae`.
 
-**Document-level leakage** (docs with ≥1 missed span):
-- wide (EMAIL, FAMILY, NAME, ID, PHONE, URL, PROFESSIONAL): 11.2% (CI 7.2%–15.2%)
-- direct identifiers (EMAIL, NAME, PHONE, ID): 7.2% (CI 4.4%–10.4%)
+### Per-class (span strict): Pukara vs Presidio
 
-### Per-class (span strict)
+| Class | Pukara F1 | Pukara P / R | Support | Presidio F1 | Presidio P / R | Support |
+|---|---|---|---|---|---|---|
+| AGE | 86.0% | 80.7% / 92.1% | 518 | 0.0% | 0.0% / 0.0% | 518 |
+| DATE | 78.6% | 71.7% / 87.1% | 611 | 88.4% | 95.1% / 82.7% | 611 |
+| EMAIL | 98.6% | 98.0% / 99.2% | 249 | 95.4% | 99.1% / 92.0% | 249 |
+| FAMILY | 41.8% | 32.6% / 58.0% | 81 | 0.0% | 0.0% / 0.0% | 81 |
+| HOSPITAL | 43.0% | 34.4% / 57.4% | 136 | 0.0% | 0.0% / 0.0% | 136 |
+| ID | 29.1% | 25.4% / 34.1% | 754 | 0.0% | 0.0% / 0.0% | 754 |
+| LOCATION | 49.8% | 57.1% / 44.2% | 1732 | 38.6% | 32.2% / 48.3% | 1732 |
+| NAME | 50.4% | 48.0% / 53.0% | 1003 | 46.4% | 41.1% / 53.4% | 1003 |
+| ORGANIZATION | 2.2% | 4.5% / 1.5% | 67 | 0.0% | 0.0% / 0.0% | 67 |
+| OTHER | 0.0% | 0.0% / 0.0% | 7 | 0.0% | 0.0% / 0.0% | 7 |
+| PHONE | 16.2% | 8.9% / 97.0% | 33 | 0.0% | 0.0% / 0.0% | 33 |
+| PROFESSION | 48.0% | 37.5% / 66.7% | 9 | 0.0% | 0.0% / 0.0% | 9 |
+| SEX | 59.0% | 90.2% / 43.8% | 461 | 0.0% | 0.0% / 0.0% | 461 |
+| URL | — | — / — | — | 0.0% | 0.0% / 0.0% | 0 |
 
-| Class | Precision | Recall | F1 | Support |
-|---|---|---|---|---|
-| AGE | 80.7% | 92.1% | 86.0% | 518 |
-| DATE | 71.7% | 87.1% | 78.6% | 611 |
-| EMAIL | 98.0% | 99.2% | 98.6% | 249 |
-| FAMILY | 32.6% | 58.0% | 41.8% | 81 |
-| HOSPITAL | 34.4% | 57.4% | 43.0% | 136 |
-| ID | 25.4% | 34.1% | 29.1% | 754 |
-| LOCATION | 57.1% | 44.2% | 49.8% | 1732 |
-| NAME | 48.0% | 53.0% | 50.4% | 1003 |
-| ORGANIZATION | 4.5% | 1.5% | 2.2% | 67 |
-| OTHER | 0.0% | 0.0% | 0.0% | 7 |
-| PHONE | 8.9% | 97.0% | 16.2% | 33 |
-| PROFESSION | 37.5% | 66.7% | 48.0% | 9 |
-| SEX | 90.2% | 43.8% | 59.0% | 461 |
+_Classes where the Presidio baseline wins on strict F1: DATE._
 
-_Person names are merged into `NAME` (any person name gets the same pseudonymisation treatment); see `eval/PROTOCOL.md`._
-
-_Residual classes below 10% F1: `ORGANIZATION` has no dedicated regex rule and the CARMEN-trained BERT predicts few organizations (low support); `TIME` and `URL` have zero gold support in MEDDOCAN._
+_Person names are merged into `NAME` (any person name gets the same pseudonymisation treatment); see `eval/PROTOCOL.md`. Residual classes below 10% F1 in Pukara: `ORGANIZATION` has no dedicated regex rule and the CARMEN-trained BERT predicts few organizations (low support)._
 
 ### Ablation on dev (not reportable; shows how the configuration was chosen)
 
@@ -68,9 +67,20 @@ The frozen configuration is `combined` (BERT + regex, Presidio off): it maximize
 
 ## CARMEN-I (secondary, in-distribution upper bound)
 
-_Pukara: the BERT model is fine-tuned on CARMEN-I; in-distribution, possible train overlap, upper bound._
+_Pukara: the BERT model is fine-tuned on CARMEN-I; in-distribution, possible train overlap, upper bound. The Presidio row is the standalone baseline with the same evaluator._
 
-- Documents: 2000; word F1 84.3%, relaxed F1 86.4%, neutralization 95.0%, wide leakage 2.0%.
+| Metric | Pukara | Presidio |
+|---|---|---|
+| Documents | 2000 | 2000 |
+| Word F1 | 84.3% | 26.3% |
+| Span strict F1 | 75.2% | 23.3% |
+| Span relaxed F1 | 86.4% | 26.9% |
+| PHI neutralization | 95.0% | 42.9% |
+| Leakage wide | 2.0% (CI 1.4%–2.6%) | 14.9% (CI 13.3%–16.4%) |
+| Leakage direct | 1.8% (CI 1.2%–2.5%) | 8.4% (CI 7.2%–9.7%) |
+_CARMEN-I contains many documents with no gold PHI; the per-document bootstrap CI of F1/neutralization is therefore dominated by empty documents and is omitted here (only leakage CI, a document-level mean, is shown). The full CI arrays are in the JSON files._
+
+_The external `ramsestein/presidio_carmen` repository is cited only as a source evaluation (`es_core_news_md`, 1,000 docs, character Jaccard) and is **not** comparable row-by-row with this table._
 
 ## Synthetic prompt benchmark
 

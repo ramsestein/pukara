@@ -33,9 +33,25 @@ def _rate_ci(block):
     return f"{_pct(lo)}–{_pct(hi)}"
 
 
+def _f1(level):
+    return _pct(level["f1"])
+
+
+def _f1_ci(level):
+    if "f1_ci95" in level:
+        return f"{_pct(level['f1'])} (CI {_ci(level)})"
+    return _pct(level["f1"])
+
+
+def _rate(block):
+    return f"{_pct(block['rate'])} (CI {_rate_ci(block)})"
+
+
 def main() -> int:
     meddocan = load("meddocan.json")
     carmen = load("carmen_pukara.json")
+    presidio_meddocan = load("presidio_meddocan.json")
+    presidio_carmen = load("presidio_carmen.json")
     abl = {
         "regex": load("ablate_dev_regex.json"),
         "bert": load("ablate_dev_bert.json"),
@@ -71,49 +87,65 @@ def main() -> int:
     ]
 
     if meddocan:
-        wl = meddocan["word_level"]
-        ss = meddocan["span_strict"]
-        sr = meddocan["span_relaxed"]
-        nn = meddocan["phi_neutralization"]
-        lk = meddocan["leakage"]
+        pm = presidio_meddocan
         lines += [
-            f"- Mode: `{meddocan['mode']}`; documents: {meddocan['documents']};",
-            f"  revision `{meddocan['code_revision'][:12]}`.",
+            "_Rows: **Pukara** (`meddocan.json`) and the **Presidio standalone "
+            "baseline** (`presidio_meddocan.json`), same evaluator, same metrics._",
             "",
-            "| Level | Precision | Recall | F1 | F1 CI95 |",
-            "|---|---|---|---|---|",
-            f"| Word | {_pct(wl['precision'])} | {_pct(wl['recall'])} | {_pct(wl['f1'])} | {_ci(wl)} |",
-            f"| Span strict | {_pct(ss['precision'])} | {_pct(ss['recall'])} | {_pct(ss['f1'])} | — |",
-            f"| Span relaxed | {_pct(sr['precision'])} | {_pct(sr['recall'])} | {_pct(sr['f1'])} | {_ci(sr)} |",
+            "| Metric | Pukara | Presidio |",
+            "|---|---|---|",
+            f"| Word F1 | {_f1_ci(meddocan['word_level'])} | {_f1_ci(pm['word_level']) if pm else '—'} |",
+            f"| Span strict F1 | {_f1(meddocan['span_strict'])} | {_f1(pm['span_strict']) if pm else '—'} |",
+            f"| Span relaxed F1 | {_f1_ci(meddocan['span_relaxed'])} | {_f1_ci(pm['span_relaxed']) if pm else '—'} |",
+            f"| PHI neutralization | {_rate(meddocan['phi_neutralization'])} | {_rate(pm['phi_neutralization']) if pm else '—'} |",
+            f"| Leakage wide | {_rate(meddocan['leakage']['wide'])} | {_rate(pm['leakage']['wide']) if pm else '—'} |",
+            f"| Leakage direct | {_rate(meddocan['leakage']['direct'])} | {_rate(pm['leakage']['direct']) if pm else '—'} |",
             "",
-            "**PHI neutralization** (label-agnostic): "
-            f"{nn['covered_spans']} / {nn['total_spans']} gold PHI spans covered by at "
-            f"least one prediction ({_pct(nn['rate'])}, CI {_rate_ci(nn)}).",
+            f"- Pukara revision `{meddocan['code_revision'][:12]}`"
+            + (f", Presidio revision `{pm['code_revision'][:12]}`." if pm else "."),
             "",
-            "**Document-level leakage** (docs with ≥1 missed span):",
-            f"- wide (EMAIL, FAMILY, NAME, ID, PHONE, URL, PROFESSIONAL): "
-            f"{_pct(lk['wide']['rate'])} (CI {_rate_ci(lk['wide'])})",
-            f"- direct identifiers (EMAIL, NAME, PHONE, ID): "
-            f"{_pct(lk['direct']['rate'])} (CI {_rate_ci(lk['direct'])})",
-            "",
-            "### Per-class (span strict)",
-            "",
-            "| Class | Precision | Recall | F1 | Support |",
-            "|---|---|---|---|---|",
         ]
-        for lab in sorted(meddocan["per_class"]):
-            c = meddocan["per_class"][lab]
-            lines.append(f"| {lab} | {_pct(c['precision'])} | {_pct(c['recall'])} | "
-                         f"{_pct(c['f1'])} | {c['support']} |")
+
+        if pm:
+            labels = sorted(set(meddocan["per_class"]) | set(pm["per_class"]))
+            lines += [
+                "### Per-class (span strict): Pukara vs Presidio",
+                "",
+                "| Class | Pukara F1 | Pukara P / R | Support | Presidio F1 | Presidio P / R | Support |",
+                "|---|---|---|---|---|---|---|",
+            ]
+            for lab in labels:
+                c = meddocan["per_class"].get(lab)
+                p = pm["per_class"].get(lab)
+
+                def _cells(x):
+                    if not x:
+                        return "— | — / — | —"
+                    return (
+                        f"{_f1(x)} | {_pct(x['precision'])} / {_pct(x['recall'])} "
+                        f"| {x['support']}"
+                    )
+
+                lines.append(f"| {lab} | {_cells(c)} | {_cells(p)} |")
+            wins = [
+                lab for lab in labels
+                if meddocan["per_class"].get(lab) and pm["per_class"].get(lab)
+                and pm["per_class"][lab]["support"] > 0
+                and pm["per_class"][lab]["f1"] > meddocan["per_class"][lab]["f1"]
+            ]
+            lines += [
+                "",
+                "_Classes where the Presidio baseline wins on strict F1: "
+                f"{', '.join(sorted(wins)) if wins else 'none (Pukara wins or ties on every class with gold support)'}._",
+                "",
+                "_Person names are merged into `NAME` (any person name gets the same "
+                "pseudonymisation treatment); see `eval/PROTOCOL.md`. Residual classes "
+                "below 10% F1 in Pukara: `ORGANIZATION` has no dedicated regex rule and "
+                "the CARMEN-trained BERT predicts few organizations (low support)._",
+                "",
+            ]
+
         lines += [
-            "",
-            "_Person names are merged into `NAME` (any person name gets the same "
-            "pseudonymisation treatment); see `eval/PROTOCOL.md`._",
-            "",
-            "_Residual classes below 10% F1: `ORGANIZATION` has no dedicated regex "
-            "rule and the CARMEN-trained BERT predicts few organizations (low "
-            "support); `TIME` and `URL` have zero gold support in MEDDOCAN._",
-            "",
             "### Ablation on dev (not reportable; shows how the configuration was chosen)",
             "",
             "| Configuration | Word F1 | Relaxed F1 | Neutralization | Wide leakage |",
@@ -140,14 +172,29 @@ def main() -> int:
 
     lines += ["## CARMEN-I (secondary, in-distribution upper bound)", ""]
     if carmen:
+        pc = presidio_carmen
         lines += [
             "_Pukara: the BERT model is fine-tuned on CARMEN-I; in-distribution, "
-            "possible train overlap, upper bound._",
+            "possible train overlap, upper bound. The Presidio row is the standalone "
+            "baseline with the same evaluator._",
             "",
-            f"- Documents: {carmen['documents']}; word F1 {_pct(carmen['word_level']['f1'])}, "
-            f"relaxed F1 {_pct(carmen['span_relaxed']['f1'])}, "
-            f"neutralization {_pct(carmen['phi_neutralization']['rate'])}, "
-            f"wide leakage {_pct(carmen['leakage']['wide']['rate'])}.",
+            "| Metric | Pukara | Presidio |",
+            "|---|---|---|",
+            f"| Documents | {carmen['documents']} | {pc['documents'] if pc else '—'} |",
+            f"| Word F1 | {_f1(carmen['word_level'])} | {_f1(pc['word_level']) if pc else '—'} |",
+            f"| Span strict F1 | {_f1(carmen['span_strict'])} | {_f1(pc['span_strict']) if pc else '—'} |",
+            f"| Span relaxed F1 | {_f1(carmen['span_relaxed'])} | {_f1(pc['span_relaxed']) if pc else '—'} |",
+            f"| PHI neutralization | {_pct(carmen['phi_neutralization']['rate'])} | {_pct(pc['phi_neutralization']['rate']) if pc else '—'} |",
+            f"| Leakage wide | {_rate(carmen['leakage']['wide'])} | {_rate(pc['leakage']['wide']) if pc else '—'} |",
+            f"| Leakage direct | {_rate(carmen['leakage']['direct'])} | {_rate(pc['leakage']['direct']) if pc else '—'} |",
+            "_CARMEN-I contains many documents with no gold PHI; the per-document "
+            "bootstrap CI of F1/neutralization is therefore dominated by empty "
+            "documents and is omitted here (only leakage CI, a document-level mean, "
+            "is shown). The full CI arrays are in the JSON files._",
+            "",
+            "_The external `ramsestein/presidio_carmen` repository is cited only as a "
+            "source evaluation (`es_core_news_md`, 1,000 docs, character Jaccard) and "
+            "is **not** comparable row-by-row with this table._",
             "",
         ]
     else:
