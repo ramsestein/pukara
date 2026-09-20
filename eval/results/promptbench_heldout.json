@@ -1,0 +1,29 @@
+{
+  "script": "eval/promptbench_heldout.py",
+  "generated": "2026-09-20T04:40:10.305671Z",
+  "code_revision": "65dcf50d121c11027ca987e2022edc2f3254568f",
+  "mode": "combined",
+  "seed": 2024,
+  "n_prompts": 2500,
+  "span_strict": {
+    "precision": 0.7708,
+    "recall": 0.731,
+    "f1": 0.7504
+  },
+  "span_relaxed": {
+    "precision": 0.9399,
+    "recall": 0.8913,
+    "f1": 0.915
+  },
+  "coreference": {
+    "consistent_entities": 6579,
+    "total_entities_with_detected_mentions": 6579,
+    "consistency_rate": 1.0
+  },
+  "collisions": 0,
+  "limitations": [
+    "Synthetic and templated: optimistic upper bound.",
+    "Potential circularity if templates and regex rules share authors.",
+    "Held-out categories described independently of the dev templates."
+  ]
+}

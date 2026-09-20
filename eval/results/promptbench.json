@@ -1,24 +1,24 @@
 {
   "script": "eval/promptbench.py",
-  "generated": "2026-09-19T08:51:10.403227Z",
-  "code_revision": "30fb7e2cf5eb71d6b44eb659fd807e30adf0dc4e",
+  "generated": "2026-09-20T04:51:19.173774Z",
+  "code_revision": "65dcf50d121c11027ca987e2022edc2f3254568f",
   "mode": "combined",
   "seed": 42,
   "n_prompts": 5000,
   "span_strict": {
-    "precision": 0.4225,
-    "recall": 0.5521,
-    "f1": 0.4787
+    "precision": 0.6424,
+    "recall": 0.7191,
+    "f1": 0.6786
   },
   "span_relaxed": {
-    "precision": 0.7303,
+    "precision": 0.8526,
     "recall": 0.9544,
-    "f1": 0.8275
+    "f1": 0.9006
   },
   "coreference": {
-    "consistent_entities": 13360,
-    "total_entities_with_detected_mentions": 14024,
-    "consistency_rate": 0.9527
+    "consistent_entities": 17950,
+    "total_entities_with_detected_mentions": 18614,
+    "consistency_rate": 0.9643
   },
   "collisions": 0,
   "limitations": [
