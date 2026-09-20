@@ -18,7 +18,7 @@ jobs:
           python-version: ${{ matrix.python-version }}
           cache: pip
       - name: Instalar dependencias de test
-        run: pip install cryptography pytest pytest-cov ruff
+        run: pip install cryptography pytest pytest-cov ruff hypothesis
       - name: Lint (ruff)
         run: ruff check src tests eval
       - name: Tests con cobertura (secure.py y proxy.py)
