@@ -1,0 +1,178 @@
+{
+  "script": "eval/meddocan.py",
+  "generated": "2026-09-20T07:47:16.636767Z",
+  "code_revision": "31ccec3edeaea2877c368eb35ca208eff95977cb",
+  "dirty": false,
+  "mode": "presidio",
+  "presidio": false,
+  "presidio_meta": {
+    "versions": {
+      "presidio_analyzer": "2.2.364",
+      "spacy": "3.8.16"
+    },
+    "spacy_model": "es_core_news_lg",
+    "mapping": "PRESIDIO_TO_UNIFIED (full)",
+    "unmapped_entity_types": [
+      "ORGANIZATION"
+    ]
+  },
+  "model": null,
+  "seed": 42,
+  "splits": [
+    "test"
+  ],
+  "documents": 250,
+  "word_level": {
+    "precision": 0.681,
+    "recall": 0.5223,
+    "f1": 0.5911,
+    "f1_ci95": [
+      0.5788,
+      0.5993
+    ]
+  },
+  "span_strict": {
+    "precision": 0.4781,
+    "recall": 0.4017,
+    "f1": 0.4366
+  },
+  "span_relaxed": {
+    "precision": 0.6472,
+    "recall": 0.5437,
+    "f1": 0.591,
+    "f1_ci95": [
+      0.5841,
+      0.6038
+    ]
+  },
+  "per_class": {
+    "AGE": {
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "support": 518
+    },
+    "DATE": {
+      "precision": 0.9510357815442562,
+      "recall": 0.8265139116202946,
+      "f1": 0.8844133099824869,
+      "support": 611
+    },
+    "EMAIL": {
+      "precision": 0.9913419913419913,
+      "recall": 0.9196787148594378,
+      "f1": 0.9541666666666667,
+      "support": 249
+    },
+    "FAMILY": {
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "support": 81
+    },
+    "HOSPITAL": {
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "support": 136
+    },
+    "ID": {
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "support": 754
+    },
+    "LOCATION": {
+      "precision": 0.3219230769230769,
+      "recall": 0.48325635103926096,
+      "f1": 0.3864265927977839,
+      "support": 1732
+    },
+    "NAME": {
+      "precision": 0.410727969348659,
+      "recall": 0.5343968095712861,
+      "f1": 0.464471403812825,
+      "support": 1003
+    },
+    "ORGANIZATION": {
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "support": 67
+    },
+    "OTHER": {
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "support": 7
+    },
+    "PHONE": {
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "support": 33
+    },
+    "PROFESSION": {
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "support": 9
+    },
+    "SEX": {
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "support": 461
+    },
+    "URL": {
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "support": 0
+    }
+  },
+  "phi_neutralization": {
+    "covered_spans": 3184,
+    "total_spans": 5661,
+    "rate": 0.5624,
+    "ci95": [
+      0.5548,
+      0.5725
+    ]
+  },
+  "leakage": {
+    "wide": {
+      "leaked_docs": 250,
+      "total_docs": 250,
+      "rate": 1.0,
+      "ci95": [
+        1.0,
+        1.0
+      ]
+    },
+    "direct": {
+      "leaked_docs": 250,
+      "total_docs": 250,
+      "rate": 1.0,
+      "ci95": [
+        1.0,
+        1.0
+      ]
+    },
+    "any_phi": {
+      "leaked_docs": 250,
+      "total_docs": 250,
+      "rate": 1.0,
+      "ci95": [
+        1.0,
+        1.0
+      ]
+    }
+  },
+  "notes": [
+    "Gold and predictions are unified-label PHI spans.",
+    "Leakage wide (principal): EMAIL, FAMILY, NAME, ID, PHONE, URL, PROFESSIONAL.",
+    "Leakage direct: EMAIL, NAME, PHONE, ID.",
+    "Leakage any_phi: any gold PHI span missed (label-agnostic)."
+  ]
+}
