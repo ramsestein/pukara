@@ -109,17 +109,24 @@ report vulnerabilities.
 ## Evaluation
 
 Pseudonymisation metrics are regenerated from versioned JSON files with
-`make eval` and reported in [`docs/metrics.md`](docs/metrics.md). CARMEN-I is
-retired as a headline metric (the model was fine-tuned on it and no public
-train/test split could be determined); MEDDOCAN `dev`+`test` is the clean
-out-of-distribution set.
+`make eval` and reported in [`docs/metrics.md`](docs/metrics.md). The reported
+split is **MEDDOCAN `test`** (250 documents, out-of-distribution, run once):
+word F1 84.4 %, PHI neutralization 88.6 %, document-level leakage 7.2 % for
+direct identifiers (11.2 % for the wide definition). CARMEN-I is kept only as a
+secondary in-distribution upper bound (the model was fine-tuned on it).
 
 ## Limitations
 
 - **No forward secrecy.** The protocol uses a pre-shared key: whoever obtains
   `ENCRYPTION_SECRET` can decrypt recorded traffic.
 - **Detector recall is < 1.** Missed direct identifiers are transmitted in the
-  clear; see the measured leakage in `docs/metrics.md`.
+  clear; measured document-level leakage on MEDDOCAN test is 7.2 % (direct) /
+  11.2 % (wide) — see `docs/metrics.md`.
+- **Out-of-distribution drop.** The BERT model is fine-tuned on CARMEN-I; on
+  MEDDOCAN (a different clinical corpus) the neutralization is 88.6 %, lower
+  than the in-distribution CARMEN-I figure in `docs/metrics.md`.
+- **Corpus mismatch.** MEDDOCAN consists of structured clinical cases with a
+  header block; results may not transfer to discharge letters or user prompts.
 - **Traffic analysis is not mitigated** (sizes and timings are visible).
 - **Re-identification via quasi-identifiers** is possible even when every direct
   identifier is replaced.

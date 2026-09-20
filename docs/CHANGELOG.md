@@ -44,6 +44,21 @@ adheres to [Semantic Versioning](https://semver.org/).
 - Threat model (`docs/threat-model.md`) and ADR
   (`docs/dev/adr-001-protocol.md`).
 
+### Evaluation (second pass)
+
+- Evaluation protocol frozen in `eval/PROTOCOL.md`; MEDDOCAN `train` (500) is
+  burned (regexes were derived from it), `dev` (250) is for ablations, and
+  `test` (250) is the only reported split, run once (`eval-frozen-v2`).
+- Detector fixes: phone regex bounded to Spanish formats, concrete identifier
+  formats (DNI/NIE with valid letter, NHC, CIP, SS), BERT/regex disagreement
+  rule, signature name triggers, hospital regex with case-sensitive proper noun,
+  whitelist pruning (`ANA`).
+- Tolerant placeholder restoration (`deanonymize`) with property tests
+  (Hypothesis).
+- Microsoft Presidio as an optional third detector component
+  (`PUKARA_ENABLE_PRESIDIO=1`); the standalone Presidio baseline is referenced
+  from `ramsestein/presidio_carmen`.
+
 ## [0.1.0] - 2026-09-18
 
 - Initial release.
