@@ -268,17 +268,32 @@ def main() -> int:
         lines += [
             f"- Round-trip exact (`deanonymize(anonymize(x)) == x`): "
             f"{rt['failures']} failures / {rt['texts']} texts ({_pct(rt['rate'])}). "
-            "The remaining failures are the adversarial texts with a literal "
-            "`[NOMBRE_1]` (audit A9, inherent to the reversible-placeholder design).",
-            f"- Spurious restorations: {sp['altered']}/{sp['samples']} legit "
-            f"bracket/underscore samples altered ({_pct(sp['rate'])}).",
+            "Literal placeholders in the input (`[NOMBRE_1]`, nested or malformed) "
+            "are escaped on anonymize and unescaped after deanonymize, so round-trip "
+            "is exact even for those adversarial texts.",
+            f"- Spurious restorations: {sp['altered']}/{sp['samples']} placeholder-free "
+            f"samples altered ({_pct(sp['rate'])}, CI "
+            f"{_pct(sp['rate_ci95'][0])}–{_pct(sp['rate_ci95'][1])}); "
+            f"{_pct(sp['char_rate'])} of characters altered.",
             "",
             "| Perturbation | Restored | Rate |",
             "|---|---|---|",
         ]
         for name, r in utility["robustness"].items():
             lines.append(f"| {name} | {r['restored']}/{r['total']} | {_pct(r['rate'])} |")
-        lines.append("")
+        lost = utility["robustness"]["lost_brackets"]
+        single = utility["robustness"]["single_bracket"]
+        lines += [
+            "",
+            f"_`lost_brackets` ({_pct(lost['rate'])}): removing both brackets leaves "
+            "no unambiguous anchor, so only placeholders whose tag+number is "
+            "word-bounded are recovered; forcing the rest (glued to adjacent words, "
+            "or bare `tag_n` inside other identifiers) would cause spurious "
+            f"restorations. `single_bracket` ({_pct(single['rate'])}): a lone bracket "
+            "is ambiguous with prose, so only `[TAG_n` / `TAG_n]` forms at a word "
+            "boundary are recovered; the rest are left untouched for the same reason._",
+            "",
+        ]
     else:
         lines += ["No utility results yet.\n"]
 

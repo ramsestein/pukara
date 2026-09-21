@@ -102,20 +102,22 @@ _Limitations: synthetic and templated (optimistic upper bound); possible circula
 
 ## Utility preservation (restoration robustness)
 
-- Round-trip exact (`deanonymize(anonymize(x)) == x`): 2 failures / 57 texts (96.5%). The remaining failures are the adversarial texts with a literal `[NOMBRE_1]` (audit A9, inherent to the reversible-placeholder design).
-- Spurious restorations: 1/5 legit bracket/underscore samples altered (20.0%).
+- Round-trip exact (`deanonymize(anonymize(x)) == x`): 0 failures / 57 texts (100.0%). Literal placeholders in the input (`[NOMBRE_1]`, nested or malformed) are escaped on anonymize and unescaped after deanonymize, so round-trip is exact even for those adversarial texts.
+- Spurious restorations: 170/600 placeholder-free samples altered (28.3%, CI 24.5%–32.0%); 5.9% of characters altered.
 
 | Perturbation | Restored | Rate |
 |---|---|---|
-| uppercase | 56/56 | 100.0% |
-| bold_markers | 56/56 | 100.0% |
-| lost_brackets | 34/56 | 60.7% |
-| single_bracket | 50/56 | 89.3% |
-| space_inner | 56/56 | 100.0% |
-| label_translated | 56/56 | 100.0% |
-| plural_suffix | 56/56 | 100.0% |
-| genitive_suffix | 56/56 | 100.0% |
-| split_by_newline | 56/56 | 100.0% |
+| uppercase | 54/54 | 100.0% |
+| bold_markers | 54/54 | 100.0% |
+| lost_brackets | 31/54 | 57.4% |
+| single_bracket | 48/54 | 88.9% |
+| space_inner | 54/54 | 100.0% |
+| label_translated | 54/54 | 100.0% |
+| plural_suffix | 54/54 | 100.0% |
+| genitive_suffix | 54/54 | 100.0% |
+| split_by_newline | 54/54 | 100.0% |
+
+_`lost_brackets` (57.4%): removing both brackets leaves no unambiguous anchor, so only placeholders whose tag+number is word-bounded are recovered; forcing the rest (glued to adjacent words, or bare `tag_n` inside other identifiers) would cause spurious restorations. `single_bracket` (88.9%): a lone bracket is ambiguous with prose, so only `[TAG_n` / `TAG_n]` forms at a word boundary are recovered; the rest are left untouched for the same reason._
 
 ## Cost
 

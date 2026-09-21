@@ -1,85 +1,127 @@
 {
   "script": "eval/utility.py",
-  "generated": "2026-09-20T04:11:32.365100Z",
-  "code_revision": "f5f59f4a167610a5d29ccb09fdf68dd32a59a714",
+  "generated": "2026-09-21T08:45:32.725217Z",
+  "code_revision": "a8dcb5479db30b53a7fafd22815220ca7d9df4e1",
+  "dirty": false,
   "roundtrip": {
     "texts": 57,
-    "failures": 2,
-    "rate": 0.9649,
-    "examples": [
-      {
-        "text": "Texto que ya contiene [NOMBRE_1] literal.",
-        "anonymized": "[NOMBRE_1] que ya contiene [NOMBRE_1] literal.",
-        "restored": "Texto que ya contiene Texto literal."
-      },
-      {
-        "text": "Corchetes anidados [[NOMBRE_1]] y [NOMBRE_10].",
-        "anonymized": "[NOMBRE_1] anidados [[NOMBRE_1]] y [NOMBRE_10].",
-        "restored": "Corchetes anidados [Corchetes] y [NOMBRE_10]."
-      }
-    ]
+    "failures": 0,
+    "rate": 1.0,
+    "examples": []
   },
   "robustness": {
     "uppercase": {
-      "restored": 56,
-      "total": 56,
+      "restored": 54,
+      "total": 54,
       "rate": 1.0
     },
     "bold_markers": {
-      "restored": 56,
-      "total": 56,
+      "restored": 54,
+      "total": 54,
       "rate": 1.0
     },
     "lost_brackets": {
-      "restored": 34,
-      "total": 56,
-      "rate": 0.6071
+      "restored": 31,
+      "total": 54,
+      "rate": 0.5741
     },
     "single_bracket": {
-      "restored": 50,
-      "total": 56,
-      "rate": 0.8929
+      "restored": 48,
+      "total": 54,
+      "rate": 0.8889
     },
     "space_inner": {
-      "restored": 56,
-      "total": 56,
+      "restored": 54,
+      "total": 54,
       "rate": 1.0
     },
     "label_translated": {
-      "restored": 56,
-      "total": 56,
+      "restored": 54,
+      "total": 54,
       "rate": 1.0
     },
     "plural_suffix": {
-      "restored": 56,
-      "total": 56,
+      "restored": 54,
+      "total": 54,
       "rate": 1.0
     },
     "genitive_suffix": {
-      "restored": 56,
-      "total": 56,
+      "restored": 54,
+      "total": 54,
       "rate": 1.0
     },
     "split_by_newline": {
-      "restored": 56,
-      "total": 56,
+      "restored": 54,
+      "total": 54,
       "rate": 1.0
     }
   },
   "spurious_restorations": {
-    "samples": 5,
-    "altered": 1,
-    "rate": 0.2,
+    "samples": 600,
+    "altered": 170,
+    "rate": 0.2833,
+    "rate_ci95": [
+      0.245,
+      0.32
+    ],
+    "altered_chars": 2261,
+    "total_chars": 38129,
+    "char_rate": 0.0593,
+    "char_rate_ci95": [
+      0.0737,
+      0.0961
+    ],
     "examples": [
       {
-        "sample": "JSON: {\"nombre_1\": 1, \"fecha_2\": \"2024-05-12\"}.",
-        "restored": "JSON: {\"<valor:NOMBRE:1>\": 1, \"<valor:FECHA:2>\": \"2024-05-12\"}."
+        "sample": "SELECT fecha_2, clave_1 FROM tabla WHERE id = 214;",
+        "restored": "SELECT <valor:FECHA:2>, clave_1 FROM tabla WHERE id = 214;"
+      },
+      {
+        "sample": "{\"hora_1\": 125, \"campo_2\": [125, 126]}",
+        "restored": "{\"<valor:HORA:1>\": 125, \"campo_2\": [125, 126]}"
+      },
+      {
+        "sample": "SELECT edad_2, total_1 FROM tabla WHERE id = 242;",
+        "restored": "SELECT <valor:EDAD:2>, total_1 FROM tabla WHERE id = 242;"
+      },
+      {
+        "sample": "{\"sexo_1\": 854, \"media_2\": [854, 855]}",
+        "restored": "{\"<valor:SEXO:1>\": 854, \"media_2\": [854, 855]}"
+      },
+      {
+        "sample": "SELECT url_2, tabla_1 FROM tabla WHERE id = 189;",
+        "restored": "SELECT <valor:URL:2>, tabla_1 FROM tabla WHERE id = 189;"
+      },
+      {
+        "sample": "{\"anonimo_1\": 704, \"desviacion_2\": [704, 705]}",
+        "restored": "{\"<valor:ANONIMO:1>\": 704, \"desviacion_2\": [704, 705]}"
+      },
+      {
+        "sample": "SELECT correo_2, nota_1 FROM tabla WHERE id = 323;",
+        "restored": "SELECT <valor:CORREO:2>, nota_1 FROM tabla WHERE id = 323;"
+      },
+      {
+        "sample": "{\"id_1\": 338, \"x_2\": [338, 339]}",
+        "restored": "{\"<valor:ID:1>\": 338, \"x_2\": [338, 339]}"
+      },
+      {
+        "sample": "SELECT profesion_2, clave_1 FROM tabla WHERE id = 303;",
+        "restored": "SELECT <valor:PROFESION:2>, clave_1 FROM tabla WHERE id = 303;"
+      },
+      {
+        "sample": "{\"familiar_1\": 833, \"campo_2\": [833, 834]}",
+        "restored": "{\"<valor:FAMILIAR:1>\": 833, \"campo_2\": [833, 834]}"
       }
+    ],
+    "notes": [
+      "Samples: promptbench dev (SQL/CSV) and held-out (tabular) categories, plus templated code/SQL/JSON/CSV and bracket/underscore text (n>=500).",
+      "Tag-like lowercase keys (nombre_1, fecha_2, ...) are the false-positive triggers of the tolerant (case-insensitive) restoration regex; neutral keys and [TAG_99]-style strings are not restored."
     ]
   },
   "notes": [
     "Round-trip failures are bugs, not metrics.",
+    "Literal placeholders in the input ([NOMBRE_1], nested, malformed) are escaped on anonymize and unescaped after deanonymize, so round-trip is exact even for those adversarial texts (audit A9).",
     "Perturbations mimic deterministic LLM edits to placeholders; the rate is the share of texts where ALL original entities are recovered.",
-    "spurious_restorations: share of legit bracket/underscore samples altered by the tolerant restoration regex (false positives)."
+    "spurious_restorations: share of legit placeholder-free texts (code, SQL, JSON, CSV, brackets/underscores) altered by the tolerant restoration regex (false positives), plus share of altered characters."
   ]
 }
