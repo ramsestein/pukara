@@ -2,6 +2,7 @@
   "script": "eval/carmen.py",
   "generated": "2026-09-20T05:45:45.697626Z",
   "code_revision": "75155c0d186a49c9233f025e870323a4e085020f",
+  "dirty": false,
   "mode": "combined",
   "model": {
     "repo": "BSC-NLP4BIA/bsc-bio-ehr-es-carmen-anon",

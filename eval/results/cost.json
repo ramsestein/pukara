@@ -2,6 +2,7 @@
   "script": "eval/cost.py",
   "generated": "2026-09-20T06:02:36.181029Z",
   "code_revision": "75155c0d186a49c9233f025e870323a4e085020f",
+  "dirty": false,
   "mode": "combined",
   "hardware": {
     "cpu": "Intel64 Family 6 Model 198 Stepping 2, GenuineIntel",

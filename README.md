@@ -6,7 +6,7 @@
 
 [![CI](https://github.com/ramsestein/pukara/actions/workflows/ci.yml/badge.svg)](https://github.com/ramsestein/pukara/actions/workflows/ci.yml)
 [![Python](https://img.shields.io/badge/Python-3.9%2B-blue)]()
-[![License](https://img.shields.io/badge/License-MIT-green)](docs/LICENSE)
+[![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
 [![Version](https://img.shields.io/badge/Version-0.2.0-orange)]()
 
 A privacy-first, self-hosted gateway for local large language models
@@ -24,7 +24,7 @@ resilient stronghold around your model.
 |---|---|
 | Name | Pukara |
 | Version | 0.2.0 |
-| License | [MIT](docs/LICENSE) |
+| License | [MIT](LICENSE) |
 | Language | Python 3.9+ |
 | Dependencies | `cryptography`, `numpy` (core); `torch`, `transformers`, `huggingface_hub` (client) |
 | Repository | https://github.com/ramsestein/pukara |
@@ -110,18 +110,45 @@ report vulnerabilities.
 
 Pseudonymisation metrics are regenerated from versioned JSON files with
 `make eval` and reported in [`docs/metrics.md`](docs/metrics.md). The reported
-split is **MEDDOCAN `test`** (250 documents, out-of-distribution, run once):
-word F1 84.4 %, PHI neutralization 88.6 %, document-level leakage 7.2 % for
-direct identifiers (11.2 % for the wide definition). CARMEN-I is kept only as a
-secondary in-distribution upper bound (the model was fine-tuned on it).
+split is **MEDDOCAN `test`** (250 documents, out-of-distribution, run once).
+The table compares Pukara with the **Presidio standalone baseline** using the
+same evaluator (full numbers and the per-class table are in `docs/metrics.md`):
+
+| Metric (MEDDOCAN test) | Pukara | Presidio |
+|---|---|---|
+| Word F1 | 84.4 % | 59.1 % |
+| Span relaxed F1 | 83.6 % | 59.1 % |
+| PHI neutralization | 88.6 % | 56.2 % |
+| Leakage direct | 7.2 % | 100.0 % |
+| Leakage wide | 11.2 % | 100.0 % |
+| Over-redaction (non-PHI tokens altered) | 1.8 % | 2.9 % |
+
+Over-redaction is the domain-agnostic metric that measures how much non-PHI
+text the detector rewrites; see `docs/metrics.md` for its bootstrap CI and the
+per-component breakdown. CARMEN-I is kept only as a secondary in-distribution
+upper bound (the model was fine-tuned on it).
 
 ## Limitations
 
 - **No forward secrecy.** The protocol uses a pre-shared key: whoever obtains
   `ENCRYPTION_SECRET` can decrypt recorded traffic.
 - **Detector recall is < 1.** Missed direct identifiers are transmitted in the
-  clear; measured document-level leakage on MEDDOCAN test is 7.2 % (direct) /
-  11.2 % (wide) — see `docs/metrics.md`.
+  clear; measured document-level leakage on MEDDOCAN test is 7.2 % (direct,
+  CI 4.4–10.4 %) / 11.2 % (wide, CI 7.2–15.2 %) — see `docs/metrics.md`.
+- **Residual leakage** is a document-level mean with a bootstrap CI; the point
+  estimate alone understates the per-document variance (see the CI in
+  `docs/metrics.md`).
+- **Over-redaction.** The detector rewrites 1.8 % of non-PHI tokens on test
+  (CI 1.8–2.0 %), mostly BERT fragments and `name` rules firing on title-case
+  clinical headers — see `docs/dev/eval-diagnosis.md`.
+- **Partial restoration on bracket loss.** Round-trip is exact (57/57), but when
+  an LLM drops the brackets of a placeholder, restoration is partial
+  (`lost_brackets` 57.4 %, `single_bracket` 88.9 %); ambiguous cases are not
+  forced to avoid spurious restorations.
+- **Domain-concept retention is not measured by design.** Pukara is not
+  clinical-domain-specific, so a clinical-concept retention metric would bias
+  the evaluation to that domain; the domain-agnostic over-redaction metric is
+  used instead.
 - **Out-of-distribution drop.** The BERT model is fine-tuned on CARMEN-I; on
   MEDDOCAN (a different clinical corpus) the neutralization is 88.6 %, lower
   than the in-distribution CARMEN-I figure in `docs/metrics.md`.
@@ -149,9 +176,9 @@ and `pip-audit`.
 
 ## Citation
 
-If you use Pukara, please cite it using [`CITATION.cff`](docs/CITATION.cff).
+If you use Pukara, please cite it using [`CITATION.cff`](CITATION.cff).
 
 ## License
 
-MIT. See [`LICENSE`](docs/LICENSE).
+MIT. See [`LICENSE`](LICENSE).
 

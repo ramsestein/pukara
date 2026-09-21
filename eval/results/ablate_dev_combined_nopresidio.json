@@ -2,6 +2,7 @@
   "script": "eval/meddocan.py",
   "generated": "2026-09-20T07:04:35.193963Z",
   "code_revision": "75155c0d186a49c9233f025e870323a4e085020f",
+  "dirty": false,
   "mode": "combined",
   "presidio": false,
   "model": {

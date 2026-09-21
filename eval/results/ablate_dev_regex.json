@@ -2,6 +2,7 @@
   "script": "eval/meddocan.py",
   "generated": "2026-09-19T10:27:11.141593Z",
   "code_revision": "b468f31e2e49cb48bf7a93ca0b48be313bc1625a",
+  "dirty": false,
   "mode": "regex",
   "presidio": false,
   "model": null,

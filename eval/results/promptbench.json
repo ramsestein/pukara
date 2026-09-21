@@ -2,6 +2,7 @@
   "script": "eval/promptbench.py",
   "generated": "2026-09-20T04:51:19.173774Z",
   "code_revision": "65dcf50d121c11027ca987e2022edc2f3254568f",
+  "dirty": false,
   "mode": "combined",
   "seed": 42,
   "n_prompts": 5000,
