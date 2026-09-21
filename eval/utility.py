@@ -162,25 +162,24 @@ def roundtrip(texts, predictor):
 def robustness(texts, predictor):
     """% de textos donde TODAS las entidades originales se recuperan tras la
     perturbación (no se exige round-trip exacto: la perturbación altera también
-    el texto no-PHI, p. ej. `uppercase`)."""
-    results = {}
-    for name, perturb in PERTURBATIONS.items():
-        ok = 0
-        total = 0
-        for text in texts:
-            anonymized, text_to_ph = predictor.anonymize(text)
-            if not text_to_ph:
-                continue  # no placeholders to perturb
-            perturbed = perturb(anonymized)
-            restored = predictor.deanonymize(perturbed)
-            total += 1
+    el texto no-PHI, p. ej. `uppercase`).
+
+    Se anonimiza una sola vez por texto (la anonimización es determinista e
+    independiente de la perturbación); después se aplican todas las
+    perturbaciones sobre el mismo texto anonimizado.
+    """
+    results = {name: {"restored": 0, "total": 0} for name in PERTURBATIONS}
+    for text in texts:
+        anonymized, text_to_ph = predictor.anonymize(text)
+        if not text_to_ph:
+            continue  # no placeholders to perturb
+        for name, perturb in PERTURBATIONS.items():
+            restored = predictor.deanonymize(perturb(anonymized))
+            results[name]["total"] += 1
             if all(orig in restored for orig in text_to_ph):
-                ok += 1
-        results[name] = {
-            "restored": ok,
-            "total": total,
-            "rate": round(ok / total, 4) if total else 0.0,
-        }
+                results[name]["restored"] += 1
+    for _name, r in results.items():
+        r["rate"] = round(r["restored"] / r["total"], 4) if r["total"] else 0.0
     return results
 
 
