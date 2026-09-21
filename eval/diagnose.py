@@ -16,6 +16,7 @@ para no recargar BERT en cada iteración.
 from __future__ import annotations
 
 import argparse
+import datetime
 import json
 import re
 import sys
@@ -137,7 +138,9 @@ def main() -> int:
 
     result = {
         "script": "eval/diagnose.py",
+        "generated": datetime.datetime.utcnow().isoformat() + "Z",
         "code_revision": common_git(),
+        "dirty": common.dirty(),
         "documents": len(docs),
         "confusion": conf,
         "name_false_negatives": name_fn,
