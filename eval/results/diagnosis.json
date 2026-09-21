@@ -1,6 +1,7 @@
 {
   "script": "eval/diagnose.py",
-  "code_revision": "b468f31e2e49cb48bf7a93ca0b48be313bc1625a",
+  "generated": "2026-09-21T08:59:18.806867Z",
+  "code_revision": "0bf88ed0a104adf56066703ae6db333476340b28",
   "dirty": false,
   "documents": 250,
   "confusion": {
@@ -12,37 +13,37 @@
     },
     "SEX": {
       "SEX": 189,
-      "HOSPITAL": 109,
-      "(FN)": 79,
-      "ID": 68,
+      "(FN)": 162,
+      "HOSPITAL": 85,
+      "ID": 9,
       "ORGANIZATION": 10
     },
     "AGE": {
-      "AGE": 495,
-      "(FN)": 15,
-      "FAMILY": 10,
+      "AGE": 486,
+      "(FN)": 28,
+      "FAMILY": 6,
       "ID": 1
     },
     "ID": {
-      "ID": 710,
-      "PHONE": 13,
-      "(FN)": 12,
+      "ID": 712,
+      "PHONE": 10,
+      "(FN)": 13,
       "NAME": 1,
       "FAMILY": 1,
       "SEX": 7,
       "PROFESSION": 1
     },
     "NAME": {
-      "NAME": 751,
-      "PHONE": 113,
+      "NAME": 757,
+      "PHONE": 116,
       "EMAIL": 2,
-      "ID": 62,
-      "FAMILY": 42,
+      "ID": 44,
+      "FAMILY": 49,
       "SEX": 4,
-      "LOCATION": 14,
+      "LOCATION": 15,
       "(FN)": 8,
-      "DATE": 3,
-      "HOSPITAL": 1
+      "HOSPITAL": 2,
+      "DATE": 3
     },
     "DATE": {
       "DATE": 723,
@@ -50,9 +51,9 @@
     },
     "LOCATION": {
       "LOCATION": 1036,
-      "PHONE": 241,
-      "ID": 37,
-      "(FN)": 350,
+      "PHONE": 154,
+      "ID": 18,
+      "(FN)": 456,
       "NAME": 63,
       "AGE": 2,
       "HOSPITAL": 35,
@@ -144,9 +145,9 @@
     }
   ],
   "over_redaction": {
-    "fp_tokens_combined": 1689,
+    "fp_tokens_combined": 1642,
     "non_gold_tokens": 99268,
-    "rate": 0.017
+    "rate": 0.0165
   },
   "rule_fp_tokens": {
     "date": 29,
