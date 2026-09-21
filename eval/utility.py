@@ -70,13 +70,25 @@ PERTURBATIONS = {
 
 # Textos con corchetes/guiones bajos legítimos (código, SQL, JSON, CSV,
 # markdown) para medir la tasa de restauraciones espurias de la regex tolerante.
-# Se generan por plantilla + muestreo del promptbench (dev y held-out); ninguna
-# muestra contiene un placeholder real del mapa ph_to_text (los números >= 100
-# no colisionan con los placeholders 1..2).
+# Se generan por plantilla + muestreo del promptbench (dev y held-out). Ninguna
+# muestra contiene un placeholder real ([TAG_1]/[TAG_2]); las claves tipo tag en
+# minúscula (`nombre_1`, `fecha_2`, …) son el disparador de falso positivo que la
+# regex tolerante (case-insensitive) restaura por error.
+_TAG_LIKE = [
+    "nombre", "fecha", "hora", "telefono", "correo", "id", "lugar", "edad",
+    "sexo", "organizacion", "profesion", "familiar", "hospital", "url", "anonimo",
+]
+_NEUTRAL = [
+    "clave", "campo", "var", "total", "media", "col", "tabla", "desviacion",
+    "indice", "nota", "x", "y",
+]
+
+
 def generate_spurious_samples(seed: int = 42, n: int = 600) -> list:
     rng = random.Random(seed)
     samples: list = []
 
+    # 1) Muestreo del promptbench (dev y held-out): categorías SQL/CSV y tabular.
     from eval import promptbench as pb
     from eval import promptbench_heldout as pb2
 
@@ -87,39 +99,40 @@ def generate_spurious_samples(seed: int = 42, n: int = 600) -> list:
         if p["id"] % 5 == 2:  # categoría tabular (CSV-like) del held-out
             samples.append(p["text"])
 
+    # 2) Plantillas: código, SQL, JSON, CSV y corchetes/guiones bajos legítimos.
     i = 0
     while len(samples) < n:
-        k = i + 100
+        tag = _TAG_LIKE[i % len(_TAG_LIKE)]
+        neu = _NEUTRAL[(i // 2) % len(_NEUTRAL)]
+        num = (i % 2) + 1
+        num2 = ((i + 1) % 2) + 1
         r = rng.randint(100, 999)
         kind = i % 6
-        if kind == 0:
+        if kind == 0:  # código con guiones bajos neutros
             samples.append(
                 f"if (x > 0) {{ arr[{r}] = matrix[{r}][{r + 1}]; "
-                f"total_{k} += var_{k}; }}"
+                f"{neu}_{num} += {neu}_{num2}; }}"
             )
-        elif kind == 1:
+        elif kind == 1:  # SQL con clave tipo tag (falso positivo)
             samples.append(
-                f"SELECT id_{k}, col_{k} FROM tabla_{k} "
-                f"WHERE id = {r} AND fecha = '2024-01-15';"
+                f"SELECT {tag}_{num}, {neu}_{num2} FROM tabla WHERE id = {r};"
             )
-        elif kind == 2:
+        elif kind == 2:  # JSON con clave tipo tag (falso positivo)
             samples.append(
-                f'{{"clave_{k}": {r}, "lista": [{r}, {r + 1}], '
-                f'"meta": {{"campo_{k}": "x"}}}}'
+                f'{{"{tag}_{num}": {r}, "{neu}_{num2}": [{r}, {r + 1}]}}'
             )
-        elif kind == 3:
+        elif kind == 3:  # CSV con cabecera neutra
             samples.append(
-                f"id,nombre,valor\n{r},campo_{k},{r}\n{r + 1},campo_{k},{r}"
+                f"{neu}_{num},{neu}_{num2},valor\n{r},campo,{r}\n{r + 1},campo,{r}"
             )
-        elif kind == 4:
+        elif kind == 4:  # JSON con clave neutra
             samples.append(
-                f"Markdown: [enlace](https://example.com/{k}) y nota[{r}]. "
-                f"Placeholder ajeno: [NOMBRE_{k}] y [FECHA_{k}]."
+                f'{{"{neu}_{num}": "a@b.es", "{neu}_{num2}": "600123456"}}'
             )
-        else:
+        else:  # markdown/corchetes legítimos (sin placeholder real)
             samples.append(
-                f"Corchetes sueltos: ]{k}[ y llaves {{{r}}}. "
-                f"Guiones bajos: var_{k}, total_{k}, media_{k}."
+                f"Markdown: [enlace](https://example.com/{r}) y nota[{r}]. "
+                f"Placeholder ajeno: [NOMBRE_{r}] y [FECHA_{r}]."
             )
         i += 1
     return samples[:n]
@@ -218,6 +231,13 @@ def spurious_restorations(predictor, seed=42, n=600):
         "char_rate_ci95": [round(x, 4) for x in
                           common.bootstrap_ci(per_sample_char_rate)],
         "examples": altered[:10],
+        "notes": [
+            "Samples: promptbench dev (SQL/CSV) and held-out (tabular) categories, "
+            "plus templated code/SQL/JSON/CSV and bracket/underscore text (n>=500).",
+            "Tag-like lowercase keys (nombre_1, fecha_2, ...) are the false-positive "
+            "triggers of the tolerant (case-insensitive) restoration regex; neutral "
+            "keys and [TAG_99]-style strings are not restored.",
+        ],
     }
 
 
