@@ -188,6 +188,53 @@ evaluación de referencia, no como baseline de la tabla: usó `es_core_news_md`
 sobre 1.000 documentos con Jaccard de caracteres, por lo que **no es comparable
 fila a fila** con las cifras de este protocolo.
 
+**Baseline Presidio configurado para español (`presidio_es`, cuarta pasada).**
+El modo `presidio` queda intacto como *out-of-the-box*; `presidio_es` reproduce
+"lo que un usuario obtendría configurando el idioma correctamente", sin
+reconocedores personalizados ni listas propias. Configuración escrita **antes**
+de ejecutar (versiones: Presidio `presidio_analyzer` 2.2.364, spaCy 3.8.16,
+`es_core_news_lg`):
+
+- Reconocedores predefinidos de `es` (cargados con
+  `registry.load_predefined_recognizers(nlp_engine=…, languages=["es"])`).
+- `PhoneRecognizer(supported_regions=("ES", "US", "GB", "DE", "FR", "IT", "PT"))`
+  — el defecto no incluye `ES`; `GB` es el código válido de
+  `python-phonenumbers` (no `UK`).
+- Mapeo `PRESIDIO_ES_TO_UNIFIED`:
+
+| Entidad Presidio | Unificado | Decisión |
+|---|---|---|
+| `PERSON` | `NAME` | persona |
+| `LOCATION` | `LOCATION` | lugar |
+| `ORGANIZATION` | `ORGANIZATION` | `SpacyRecognizer` emite `ORGANIZATION` (no `ORG`); corregido |
+| `AGE` | `AGE` | edad |
+| `DATE_TIME` | `DATE` | fecha/hora |
+| `PHONE_NUMBER` | `PHONE` | teléfono |
+| `EMAIL_ADDRESS`, `EMAIL` | `EMAIL` | correo |
+| `URL` | `URL` | enlace |
+| `ES_NIF` | `ID` | DNI/NIF español |
+| `ES_NIE` | `ID` | NIE español |
+| `IBAN_CODE` | `ID` | cuenta bancaria UE |
+| `CREDIT_CARD` | `ID` | tarjeta |
+| `NRP` | `ID` | pasaporte |
+| `MEDICAL_LICENSE` | `ID` | licencia médica |
+| `ID` | `ID` | `SpacyRecognizer` |
+| `IP_ADDRESS`, `MAC_ADDRESS`, `CRYPTO` | — (sin mapear) | no son identificadores de persona |
+
+Reconocedores ES cargados (entidades): `CreditCardRecognizer` (CREDIT_CARD),
+`EsNifRecognizer` (ES_NIF), `EsNieRecognizer` (ES_NIE), `CryptoRecognizer`
+(CRYPTO), `DateRecognizer` (DATE_TIME), `EmailRecognizer` (EMAIL_ADDRESS),
+`IbanRecognizer` (IBAN_CODE), `IpRecognizer` (IP_ADDRESS),
+`MedicalLicenseRecognizer` (MEDICAL_LICENSE), `MacAddressRecognizer`
+(MAC_ADDRESS), `PhoneRecognizer` (PHONE_NUMBER), `UrlRecognizer` (URL),
+`SpacyRecognizer` (NRP, ORGANIZATION, LOCATION, PERSON, AGE, DATE_TIME, ID,
+PHONE_NUMBER, EMAIL).
+
+Las cifras van a `eval/results/presidio_es_meddocan.json`,
+`eval/results/presidio_es_carmen.json` y
+`eval/results/over_redaction_test_presidio_es.json`, con las mismas métricas e
+IC que el resto (fase 2).
+
 Neutralización y leakage de Presidio (integración y baseline) se calculan **sin
 depender de la etiqueta**, con el mismo evaluador que Pukara.
 

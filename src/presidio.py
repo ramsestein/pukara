@@ -130,3 +130,98 @@ def detect_full(text: str) -> list[dict]:
             deduped.append(e)
     deduped.sort(key=lambda x: x["start"])
     return deduped
+
+
+# ── Modo `presidio_es`: baseline configurado para español ─────────────────
+# El modo `presidio` (out-of-the-box) queda intacto. Este modo reproduce "lo que
+# un usuario obtendría configurando el idioma correctamente": los reconocedores
+# predefinidos para `es` (incluidos ES_NIF/ES_NIE), un PhoneRecognizer con la
+# región ES, y un mapeo completo al conjunto unificado (sin reconocedores
+# personalizados ni listas propias).
+
+# Códigos de región válidos para python-phonenumbers (GB, no UK).
+_ES_PHONE_REGIONS = ("ES", "US", "GB", "DE", "FR", "IT", "PT")
+
+PRESIDIO_ES_TO_UNIFIED = {
+    # Personas y lugares (SpacyRecognizer emite "ORGANIZATION", no "ORG").
+    "PERSON": "NAME",
+    "LOCATION": "LOCATION",
+    "ORGANIZATION": "ORGANIZATION",
+    "AGE": "AGE",
+    "DATE_TIME": "DATE",
+    "PHONE_NUMBER": "PHONE",
+    "EMAIL_ADDRESS": "EMAIL",
+    "EMAIL": "EMAIL",
+    "URL": "URL",
+    # Identificadores (España y UE): ES_NIF/ES_NIE son reconocedores ES.
+    "ES_NIF": "ID",
+    "ES_NIE": "ID",
+    "IBAN_CODE": "ID",
+    "CREDIT_CARD": "ID",
+    "NRP": "ID",
+    "MEDICAL_LICENSE": "ID",
+    "ID": "ID",
+    # Sin mapear (documentado en PROTOCOL.md §6): no son identificadores de
+    # persona (IP/MAC/cripto no aparecen en texto clínico).
+    # "IP_ADDRESS", "MAC_ADDRESS", "CRYPTO",
+}
+
+_ANALYZER_ES = None
+_LOAD_FAILED_ES = False
+
+
+def _engine_es():
+    global _ANALYZER_ES, _LOAD_FAILED_ES
+    if _ANALYZER_ES is None and not _LOAD_FAILED_ES:
+        try:
+            from presidio_analyzer import AnalyzerEngine, RecognizerRegistry
+            from presidio_analyzer.nlp_engine import NlpEngineProvider
+            from presidio_analyzer.predefined_recognizers import PhoneRecognizer
+
+            config = {
+                "nlp_engine_name": "spacy",
+                "models": [{"lang_code": "es", "model_name": "es_core_news_lg"}],
+            }
+            provider = NlpEngineProvider(nlp_configuration=config)
+            nlp_engine = provider.create_engine()
+            registry = RecognizerRegistry()
+            registry.load_predefined_recognizers(nlp_engine=nlp_engine, languages=["es"])
+            # Reemplaza el PhoneRecognizer por defecto (sin ES) por uno con ES.
+            registry.recognizers = [
+                r for r in registry.recognizers
+                if not isinstance(r, PhoneRecognizer)
+            ]
+            registry.add_recognizer(
+                PhoneRecognizer(supported_language="es",
+                                supported_regions=_ES_PHONE_REGIONS)
+            )
+            _ANALYZER_ES = AnalyzerEngine(nlp_engine=nlp_engine, registry=registry)
+        except Exception as exc:  # noqa: BLE001
+            _LOAD_FAILED_ES = True
+            print(f"[presidio_es] no disponible: {exc}")
+    return _ANALYZER_ES
+
+
+def available_es() -> bool:
+    return _engine_es() is not None
+
+
+def detect_es(text: str) -> list[dict]:
+    """Todas las entidades del baseline Presidio configurado para español."""
+    eng = _engine_es()
+    if eng is None:
+        return []
+    ents = []
+    for r in eng.analyze(text=text, language="es"):
+        lab = PRESIDIO_ES_TO_UNIFIED.get(r.entity_type)
+        if lab is None or r.start >= r.end:
+            continue
+        ents.append({"start": r.start, "end": r.end, "label": lab,
+                     "text": text[r.start:r.end]})
+    # Dedup por solape: el span más largo gana.
+    deduped = []
+    for e in sorted(ents, key=lambda x: (x["start"], -(x["end"] - x["start"]))):
+        if not any(e["start"] < k["end"] and k["start"] < e["end"] for k in deduped):
+            deduped.append(e)
+    deduped.sort(key=lambda x: x["start"])
+    return deduped

@@ -108,7 +108,7 @@ class Predictor:
             self._anon = anonymizer.Anonymizer.__new__(anonymizer.Anonymizer)
             self._anon.reset()
             self._anon.detect = self._anon._regex_detect
-        elif mode == "presidio":
+        elif mode in ("presidio", "presidio_es"):
             self._anon = None
         else:
             from src import anonymizer as _an
@@ -122,6 +122,9 @@ class Predictor:
         if self.mode == "presidio":
             from src import presidio
             return presidio.detect_full(text)
+        if self.mode == "presidio_es":
+            from src import presidio
+            return presidio.detect_es(text)
         if self.mode == "bert":
             return self._anon._bert_detect(text)
         return self._anon.detect(text)
@@ -253,7 +256,12 @@ def span_coverage(gold: list[dict], pred: list[dict]) -> tuple:
 
 # ── Bootstrap ──────────────────────────────────────────────────────────────
 def bootstrap_ci(values: list, n: int = 1000, seed: int = 42) -> tuple:
-    """95% percentile bootstrap CI of the mean of `values`."""
+    """95% percentile bootstrap CI of the mean of `values`.
+
+    Solo para métricas que **son** una media por documento (p. ej. leakage a
+    nivel de documento, proporciones por documento). Para cocientes agregados
+    usa `bootstrap_ratio_ci` o `bootstrap_f1_ci`.
+    """
     rng = random.Random(seed)
     size = len(values)
     if size == 0:
@@ -264,6 +272,92 @@ def bootstrap_ci(values: list, n: int = 1000, seed: int = 42) -> tuple:
         means.append(sum(sample) / size)
     means.sort()
     return means[int(0.025 * (n - 1))], means[int(0.975 * (n - 1))]
+
+
+def _resample_idx(rng: random.Random, size: int) -> list:
+    return [rng.randrange(size) for _ in range(size)]
+
+
+def bootstrap_ratio_ci(numerators: list, denominators: list,
+                       n: int = 1000, seed: int = 42) -> tuple:
+    """95% percentile bootstrap CI del cociente agregado `sum(num)/sum(den)`.
+
+    Remuestrea documentos y recalcula `sum(num)/sum(den)` en cada remuestra.
+    Es el estimador correcto para cocientes agregados (neutralización,
+    sobre-redacción, proporciones de caracteres, …).
+    """
+    rng = random.Random(seed)
+    size = len(numerators)
+    if size == 0 or sum(denominators) == 0:
+        return (0.0, 0.0)
+    ratios = []
+    for _ in range(n):
+        idx = _resample_idx(rng, size)
+        num = sum(numerators[i] for i in idx)
+        den = sum(denominators[i] for i in idx)
+        ratios.append(num / den if den else 0.0)
+    ratios.sort()
+    return ratios[int(0.025 * (n - 1))], ratios[int(0.975 * (n - 1))]
+
+
+def bootstrap_f1_ci(tp: list, fp: list, fn: list,
+                    n: int = 1000, seed: int = 42) -> tuple:
+    """95% percentile bootstrap CI del F1 agregado desde TP/FP/FN por documento.
+
+    Remuestrea documentos, reagrega TP/FP/FN y recalcula P, R y F1 en cada
+    remuestra.
+    """
+    rng = random.Random(seed)
+    size = len(tp)
+    if size == 0:
+        return (0.0, 0.0)
+    f1s = []
+    for _ in range(n):
+        idx = _resample_idx(rng, size)
+        t = sum(tp[i] for i in idx)
+        f = sum(fp[i] for i in idx)
+        m = sum(fn[i] for i in idx)
+        p = t / (t + f) if (t + f) else 0.0
+        r = t / (t + m) if (t + m) else 0.0
+        f1s.append(2 * p * r / (p + r) if (p + r) else 0.0)
+    f1s.sort()
+    return f1s[int(0.025 * (n - 1))], f1s[int(0.975 * (n - 1))]
+
+
+def document_leak_classes_wide(gold: list, pred: list) -> set:
+    """Clases (definición amplia) con al menos un span gold sin cubrir."""
+    return {
+        g["label"] for g in gold
+        if g["label"] in WIDE_TAGS and not any(_span_overlap(g, p) for p in pred)
+    }
+
+
+def leakage_attribution(per_doc_classes: list, total_docs: int,
+                        n: int = 1000, seed: int = 42) -> dict:
+    """Desglose de la fuga por clase: % de documentos cuyo leak se debe solo a
+    una clase (o a varias). `per_doc_classes` es una lista de conjuntos de
+    clases que fugan por documento. Devuelve buckets `solo_<CLASE>` y
+    `multiple` con docs/rate/ci95 (media por documento).
+    """
+    assigned = []
+    for classes in per_doc_classes:
+        if not classes:
+            assigned.append(None)
+        elif len(classes) == 1:
+            assigned.append("solo_" + next(iter(classes)))
+        else:
+            assigned.append("multiple")
+    keys = sorted({a for a in assigned if a is not None},
+                  key=lambda k: (k != "multiple", k))
+    out = {}
+    for key in keys:
+        ind = [1 if a == key else 0 for a in assigned]
+        out[key] = {
+            "docs": sum(ind),
+            "rate": round(sum(ind) / total_docs, 4) if total_docs else 0.0,
+            "ci95": [round(x, 4) for x in bootstrap_ci(ind, n=n, seed=seed)],
+        }
+    return out
 
 
 def dirty() -> bool:
@@ -281,12 +375,13 @@ def dirty() -> bool:
         return True
 
 
-def presidio_meta(sample_texts: list) -> dict:
+def presidio_meta(sample_texts: list, mode: str = "presidio") -> dict:
     """Metadato del baseline Presidio standalone (solo lectura, no toca el detector).
 
-    Recoge las versiones de Presidio/spaCy y las clases de Presidio que quedan
-    **sin mapear** al conjunto unificado (los `entity_type` crudos observados en
-    una muestra que no están en `PRESIDIO_TO_UNIFIED`).
+    Recoge las versiones de Presidio/spaCy, el modo y las clases de Presidio que
+    quedan **sin mapear** al conjunto unificado (los `entity_type` crudos
+    observados en una muestra). Para `presidio_es` incluye además la lista de
+    reconocedores ES y las regiones de teléfono.
     """
     import importlib.metadata as md
 
@@ -299,6 +394,35 @@ def presidio_meta(sample_texts: list) -> dict:
         except Exception:  # noqa: BLE001
             versions[pkg] = "unknown"
 
+    if mode == "presidio_es":
+        engine = presidio._engine_es()  # noqa: SLF001 (metadato de eval)
+        mapping = presidio.PRESIDIO_ES_TO_UNIFIED
+        seen = set()
+        if engine is not None:
+            for text in sample_texts:
+                for r in engine.analyze(text=text, language="es"):
+                    seen.add(r.entity_type)
+        unmapped = sorted(seen - set(mapping))
+        recognizers = []
+        if engine is not None:
+            try:
+                for r in engine.registry.get_recognizers(language="es", all_fields=True):
+                    recognizers.append({
+                        "name": type(r).__name__,
+                        "entities": list(r.supported_entities),
+                    })
+            except Exception:  # noqa: BLE001
+                recognizers = []
+        return {
+            "versions": versions,
+            "spacy_model": "es_core_news_lg",
+            "mode": "presidio_es",
+            "mapping": "PRESIDIO_ES_TO_UNIFIED",
+            "phone_regions": list(presidio._ES_PHONE_REGIONS),
+            "unmapped_entity_types": unmapped,
+            "recognizers": recognizers,
+        }
+
     seen = set()
     for text in sample_texts:
         for r in presidio._analyze(text):  # noqa: SLF001 (metadato de eval)
@@ -307,6 +431,7 @@ def presidio_meta(sample_texts: list) -> dict:
     return {
         "versions": versions,
         "spacy_model": "es_core_news_lg",
+        "mode": "presidio",
         "mapping": "PRESIDIO_TO_UNIFIED (full)",
         "unmapped_entity_types": unmapped,
     }

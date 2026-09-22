@@ -64,7 +64,8 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Over-redaction metric")
     parser.add_argument("--corpus", default="data/meddocan/corpus")
     parser.add_argument("--split", default="test")
-    parser.add_argument("--mode", choices=["combined", "presidio"], default="combined")
+    parser.add_argument("--mode", choices=["combined", "presidio", "presidio_es"],
+                        default="combined")
     parser.add_argument("--out", default="eval/results/over_redaction_test.json")
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--bootstrap", type=int, default=1000)
@@ -78,11 +79,23 @@ def main() -> int:
         print("[over-redaction] No hay documentos", file=sys.stderr)
         return 2
 
+    if args.mode == "presidio":
+        from src import presidio
+        if not presidio.available():
+            print("[over-redaction] Presidio no está disponible.", file=sys.stderr)
+            return 2
+    if args.mode == "presidio_es":
+        from src import presidio
+        if not presidio.available_es():
+            print("[over-redaction] Presidio ES no está disponible.", file=sys.stderr)
+            return 2
+
     predictor = common.Predictor(args.mode)
 
     over_tok = 0
     non_gold_tok = 0
-    per_doc_rate = []
+    per_doc_over = []
+    per_doc_non_gold = []
     by_source = Counter()
     fp_counts = Counter()
     fp_sources = {}
@@ -96,7 +109,8 @@ def main() -> int:
         nongold = set(range(len(tokens))) - gold_tok
         over_tok += len(over)
         non_gold_tok += len(nongold)
-        per_doc_rate.append(len(over) / len(nongold) if nongold else 0.0)
+        per_doc_over.append(len(over))
+        per_doc_non_gold.append(len(nongold))
 
         if not args.breakdown:
             continue
@@ -141,7 +155,8 @@ def main() -> int:
                 fp_sources.setdefault(norm, Counter())["presidio"] += 1
 
     rate = round(over_tok / non_gold_tok, 4) if non_gold_tok else 0.0
-    ci = common.bootstrap_ci(per_doc_rate, n=args.bootstrap, seed=args.seed)
+    ci = common.bootstrap_ratio_ci(per_doc_over, per_doc_non_gold,
+                                   n=args.bootstrap, seed=args.seed)
 
     result = {
         "script": "eval/over_redaction.py",
@@ -153,6 +168,7 @@ def main() -> int:
         "documents": len(docs),
         "seed": args.seed,
         "bootstrap": args.bootstrap,
+        "per_doc": {"over_redacted": per_doc_over, "non_gold": per_doc_non_gold},
         "over_redaction": {
             "over_redacted_tokens": over_tok,
             "non_gold_tokens": non_gold_tok,
@@ -162,7 +178,8 @@ def main() -> int:
         "notes": [
             "Over-redaction: non-PHI tokens (no overlap with any gold span) that "
             "fall inside a predicted span.",
-            "Global rate with per-document bootstrap CI (95%, seed 42, 1000 resamples).",
+            "Global rate with ratio bootstrap CI (resample docs, sum/sum; 95%, "
+            "seed 42, 1000 resamples).",
         ],
     }
     if args.breakdown:

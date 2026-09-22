@@ -51,7 +51,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="MEDDOCAN intrinsic evaluation")
     parser.add_argument("--corpus", default="data/meddocan/corpus")
     parser.add_argument("--split", default="dev,test")
-    parser.add_argument("--mode", choices=["regex", "bert", "combined", "presidio"],
+    parser.add_argument("--mode", choices=["regex", "bert", "combined", "presidio", "presidio_es"],
                         default="combined")
     parser.add_argument("--model-dir", default=None)
     parser.add_argument("--out", default="eval/results/meddocan.json")
@@ -81,18 +81,28 @@ def main() -> int:
             print("[eval] Presidio no está disponible (spaCy es_core_news_lg).",
                   file=sys.stderr)
             return 2
+    if args.mode == "presidio_es":
+        from src import presidio
+        if not presidio.available_es():
+            print("[eval] Presidio ES no está disponible (spaCy es_core_news_lg).",
+                  file=sys.stderr)
+            return 2
     predictor = common.Predictor(args.mode, args.model_dir,
                                  use_presidio=args.presidio)
 
-    per_doc = []
-    per_doc_relaxed = []
-    leak_wide_count = 0
-    leak_direct_count = 0
-    leak_any_count = 0
+    # Datos por documento para recalcular los IC sin volver a predecir (regla de
+    # la cuarta pasada): TP/FP/FN, numerador/denominador e indicadores de fuga.
+    per_doc_word = {"tp": [], "fp": [], "fn": []}
+    per_doc_strict = {"tp": [], "fp": [], "fn": []}
+    per_doc_relaxed = {"tp": [], "fp": [], "fn": []}
+    per_doc_neutr = {"covered": [], "total": []}
     per_doc_leak_wide = []
     per_doc_leak_direct = []
     per_doc_leak_any = []
-    per_doc_neutr = []
+    per_doc_leak_wide_classes = []
+    leak_wide_count = 0
+    leak_direct_count = 0
+    leak_any_count = 0
     covered_spans = 0
     total_gold_spans = 0
     # Aggregated counts.
@@ -115,16 +125,25 @@ def main() -> int:
         word_tp += wtp
         word_fp += wfp
         word_fn += wfn
+        per_doc_word["tp"].append(wtp)
+        per_doc_word["fp"].append(wfp)
+        per_doc_word["fn"].append(wfn)
 
         # Span level.
         tp, fp, fn = _count(common._span_exact, gold, pred)
         strict_tp += tp
         strict_fp += fp
         strict_fn += fn
+        per_doc_strict["tp"].append(tp)
+        per_doc_strict["fp"].append(fp)
+        per_doc_strict["fn"].append(fn)
         tp, fp, fn = _count(common._span_overlap, gold, pred)
         relaxed_tp += tp
         relaxed_fp += fp
         relaxed_fn += fn
+        per_doc_relaxed["tp"].append(tp)
+        per_doc_relaxed["fp"].append(fp)
+        per_doc_relaxed["fn"].append(fn)
 
         # Per-class.
         for lab in {g["label"] for g in gold} | {p["label"] for p in pred}:
@@ -145,24 +164,21 @@ def main() -> int:
             c[1] += len(p) - len(matched)
             c[2] += len(g) - tp
 
-        if common.document_leakage_wide(gold, pred):
-            leak_wide_count += 1
-        if common.document_leakage(gold, pred):
-            leak_direct_count += 1
-        if common.document_leakage_any(gold, pred):
-            leak_any_count += 1
-        per_doc_leak_wide.append(1 if common.document_leakage_wide(gold, pred) else 0)
-        per_doc_leak_direct.append(1 if common.document_leakage(gold, pred) else 0)
-        per_doc_leak_any.append(1 if common.document_leakage_any(gold, pred) else 0)
+        lw = common.document_leakage_wide(gold, pred)
+        ld = common.document_leakage(gold, pred)
+        la = common.document_leakage_any(gold, pred)
+        leak_wide_count += lw
+        leak_direct_count += ld
+        leak_any_count += la
+        per_doc_leak_wide.append(1 if lw else 0)
+        per_doc_leak_direct.append(1 if ld else 0)
+        per_doc_leak_any.append(1 if la else 0)
+        per_doc_leak_wide_classes.append(common.document_leak_classes_wide(gold, pred))
         cov, tot = common.span_coverage(gold, pred)
         covered_spans += cov
         total_gold_spans += tot
-        per_doc_neutr.append(cov / tot if tot else 0.0)
-
-        # Per-doc F1 values for bootstrap CIs.
-        per_doc.append(_f1(wtp, wfp, wfn))
-        rtp, rfp, rfn = _count(common._span_overlap, gold, pred)
-        per_doc_relaxed.append(_f1(rtp, rfp, rfn))
+        per_doc_neutr["covered"].append(cov)
+        per_doc_neutr["total"].append(tot)
 
     word_p, word_r, word_f1 = _pr(word_tp, word_fp, word_fn)
     strict_p, strict_r, strict_f1 = _pr(strict_tp, strict_fp, strict_fn)
@@ -177,16 +193,24 @@ def main() -> int:
             "support": tp + fn,
         }
 
-    word_ci = common.bootstrap_ci(per_doc, n=args.bootstrap, seed=args.seed)
-    relaxed_ci = common.bootstrap_ci(per_doc_relaxed, n=args.bootstrap, seed=args.seed)
-    neutr_ci = common.bootstrap_ci(per_doc_neutr, n=args.bootstrap, seed=args.seed)
+    # IC coherentes con el estimador (fase 2): F1 agregado con bootstrap_f1_ci,
+    # neutralización con bootstrap_ratio_ci; leakage es media por documento
+    # (bootstrap_ci, correcto tal cual).
+    word_ci = common.bootstrap_f1_ci(per_doc_word["tp"], per_doc_word["fp"],
+                                     per_doc_word["fn"], n=args.bootstrap, seed=args.seed)
+    relaxed_ci = common.bootstrap_f1_ci(per_doc_relaxed["tp"], per_doc_relaxed["fp"],
+                                        per_doc_relaxed["fn"], n=args.bootstrap, seed=args.seed)
+    neutr_ci = common.bootstrap_ratio_ci(per_doc_neutr["covered"], per_doc_neutr["total"],
+                                         n=args.bootstrap, seed=args.seed)
     wide_ci = common.bootstrap_ci(per_doc_leak_wide, n=args.bootstrap, seed=args.seed)
     direct_ci = common.bootstrap_ci(per_doc_leak_direct, n=args.bootstrap, seed=args.seed)
     any_ci = common.bootstrap_ci(per_doc_leak_any, n=args.bootstrap, seed=args.seed)
+    wide_attribution = common.leakage_attribution(
+        per_doc_leak_wide_classes, len(docs), n=args.bootstrap, seed=args.seed)
 
     presidio_meta = None
-    if args.mode == "presidio":
-        presidio_meta = common.presidio_meta([t for _, t, _g in docs])
+    if args.mode in ("presidio", "presidio_es"):
+        presidio_meta = common.presidio_meta([t for _, t, _g in docs], mode=args.mode)
 
     result = {
         "script": "eval/meddocan.py",
@@ -200,6 +224,16 @@ def main() -> int:
         "seed": args.seed,
         "splits": splits,
         "documents": len(docs),
+        "per_doc": {
+            "word": per_doc_word,
+            "strict": per_doc_strict,
+            "relaxed": per_doc_relaxed,
+            "neutralization": per_doc_neutr,
+            "leakage_wide": per_doc_leak_wide,
+            "leakage_direct": per_doc_leak_direct,
+            "leakage_any": per_doc_leak_any,
+            "leakage_wide_classes": [sorted(c) for c in per_doc_leak_wide_classes],
+        },
         "word_level": {
             "precision": round(word_p, 4),
             "recall": round(word_r, 4),
@@ -231,6 +265,7 @@ def main() -> int:
                 "total_docs": len(docs),
                 "rate": round(leak_wide_count / len(docs), 4) if len(docs) else 0.0,
                 "ci95": [round(x, 4) for x in wide_ci],
+                "attribution": wide_attribution,
             },
             "direct": {
                 "leaked_docs": leak_direct_count,

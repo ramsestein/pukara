@@ -17,7 +17,7 @@ import sys
 from pathlib import Path
 
 from eval import common
-from eval.meddocan import _count, _div, _f1, _pr, git_revision
+from eval.meddocan import _count, _div, _pr, git_revision
 
 
 def load_carmen_docs(corpus: Path):
@@ -42,7 +42,7 @@ def load_carmen_docs(corpus: Path):
 def main() -> int:
     parser = argparse.ArgumentParser(description="CARMEN-I evaluation (secondary)")
     parser.add_argument("--corpus", default="data/carmen")
-    parser.add_argument("--mode", choices=["regex", "bert", "combined", "presidio"],
+    parser.add_argument("--mode", choices=["regex", "bert", "combined", "presidio", "presidio_es"],
                         default="combined")
     parser.add_argument("--out", default="eval/results/carmen_pukara.json")
     parser.add_argument("--seed", type=int, default=42)
@@ -60,6 +60,12 @@ def main() -> int:
             print("[carmen] Presidio no está disponible (spaCy es_core_news_lg).",
                   file=sys.stderr)
             return 2
+    if args.mode == "presidio_es":
+        from src import presidio
+        if not presidio.available_es():
+            print("[carmen] Presidio ES no está disponible (spaCy es_core_news_lg).",
+                  file=sys.stderr)
+            return 2
 
     predictor = common.Predictor(args.mode)
 
@@ -69,12 +75,12 @@ def main() -> int:
     per_class_counts = {}
     leak_wide = leak_direct = leak_any = 0
     covered = total_gold = 0
-    per_doc_word = []
-    per_doc_relaxed = []
+    per_doc_word = {"tp": [], "fp": [], "fn": []}
+    per_doc_relaxed = {"tp": [], "fp": [], "fn": []}
+    per_doc_neutr = {"covered": [], "total": []}
     per_doc_leak_wide = []
     per_doc_leak_direct = []
     per_doc_leak_any = []
-    per_doc_neutr = []
 
     for idx, (_name, text, gold) in enumerate(docs):
         pred = predictor.detect(text)
@@ -91,6 +97,9 @@ def main() -> int:
         word_tp += wtp
         word_fp += wfp
         word_fn += wfn
+        per_doc_word["tp"].append(wtp)
+        per_doc_word["fp"].append(wfp)
+        per_doc_word["fn"].append(wfn)
 
         tp, fp, fn = _count(common._span_exact, gold, pred)
         strict_tp += tp
@@ -100,6 +109,9 @@ def main() -> int:
         relaxed_tp += tp
         relaxed_fp += fp
         relaxed_fn += fn
+        per_doc_relaxed["tp"].append(tp)
+        per_doc_relaxed["fp"].append(fp)
+        per_doc_relaxed["fn"].append(fn)
 
         for lab in {g["label"] for g in gold} | {p["label"] for p in pred}:
             g = [x for x in gold if x["label"] == lab]
@@ -132,11 +144,8 @@ def main() -> int:
         cov, tot = common.span_coverage(gold, pred)
         covered += cov
         total_gold += tot
-        per_doc_neutr.append(cov / tot if tot else 0.0)
-
-        per_doc_word.append(_f1(wtp, wfp, wfn))
-        rtp, rfp, rfn = _count(common._span_overlap, gold, pred)
-        per_doc_relaxed.append(_f1(rtp, rfp, rfn))
+        per_doc_neutr["covered"].append(cov)
+        per_doc_neutr["total"].append(tot)
 
     word_p, word_r, word_f1 = _pr(word_tp, word_fp, word_fn)
     strict_p, strict_r, strict_f1 = _pr(strict_tp, strict_fp, strict_fn)
@@ -152,8 +161,8 @@ def main() -> int:
         }
 
     presidio_meta = None
-    if args.mode == "presidio":
-        presidio_meta = common.presidio_meta([t for _, t, _g in docs])
+    if args.mode in ("presidio", "presidio_es"):
+        presidio_meta = common.presidio_meta([t for _, t, _g in docs], mode=args.mode)
 
     result = {
         "script": "eval/carmen.py",
@@ -162,15 +171,24 @@ def main() -> int:
         "dirty": common.dirty(),
         "mode": args.mode,
         "presidio_meta": presidio_meta,
-        "model": common.MODEL_META if args.mode != "presidio" else None,
+        "model": common.MODEL_META if args.mode != "presidio" and args.mode != "presidio_es" else None,
         "seed": args.seed,
         "documents": len(docs),
+        "per_doc": {
+            "word": per_doc_word,
+            "relaxed": per_doc_relaxed,
+            "neutralization": per_doc_neutr,
+            "leakage_wide": per_doc_leak_wide,
+            "leakage_direct": per_doc_leak_direct,
+            "leakage_any": per_doc_leak_any,
+        },
         "word_level": {
             "precision": round(word_p, 4),
             "recall": round(word_r, 4),
             "f1": round(word_f1, 4),
-            "f1_ci95": [round(x, 4) for x in
-                        common.bootstrap_ci(per_doc_word, n=args.bootstrap, seed=args.seed)],
+            "f1_ci95": [round(x, 4) for x in common.bootstrap_f1_ci(
+                per_doc_word["tp"], per_doc_word["fp"], per_doc_word["fn"],
+                n=args.bootstrap, seed=args.seed)],
         },
         "span_strict": {
             "precision": round(strict_p, 4),
@@ -181,16 +199,18 @@ def main() -> int:
             "precision": round(relaxed_p, 4),
             "recall": round(relaxed_r, 4),
             "f1": round(relaxed_f1, 4),
-            "f1_ci95": [round(x, 4) for x in
-                        common.bootstrap_ci(per_doc_relaxed, n=args.bootstrap, seed=args.seed)],
+            "f1_ci95": [round(x, 4) for x in common.bootstrap_f1_ci(
+                per_doc_relaxed["tp"], per_doc_relaxed["fp"], per_doc_relaxed["fn"],
+                n=args.bootstrap, seed=args.seed)],
         },
         "per_class": per_class,
         "phi_neutralization": {
             "covered_spans": covered,
             "total_spans": total_gold,
             "rate": round(covered / total_gold, 4) if total_gold else 0.0,
-            "ci95": [round(x, 4) for x in
-                     common.bootstrap_ci(per_doc_neutr, n=args.bootstrap, seed=args.seed)],
+            "ci95": [round(x, 4) for x in common.bootstrap_ratio_ci(
+                per_doc_neutr["covered"], per_doc_neutr["total"],
+                n=args.bootstrap, seed=args.seed)],
         },
         "leakage": {
             "wide": {"leaked_docs": leak_wide, "total_docs": len(docs),
@@ -207,11 +227,14 @@ def main() -> int:
                             per_doc_leak_any, n=args.bootstrap, seed=args.seed)]},
         },
         "note": (
-            "Presidio standalone baseline (es_core_news_lg, full PRESIDIO_TO_UNIFIED), "
-            "same evaluator as Pukara."
-            if args.mode == "presidio"
-            else "Pukara: the BERT model is fine-tuned on CARMEN-I; in-distribution, "
-                 "possible train overlap, upper bound."
+            "Presidio ES standalone baseline (es_core_news_lg, ES_NIF/ES_NIE/phone ES, "
+            "full PRESIDIO_ES_TO_UNIFIED), same evaluator as Pukara."
+            if args.mode == "presidio_es"
+            else ("Presidio standalone baseline (es_core_news_lg, full "
+                  "PRESIDIO_TO_UNIFIED), same evaluator as Pukara."
+                  if args.mode == "presidio"
+                  else "Pukara: the BERT model is fine-tuned on CARMEN-I; in-distribution, "
+                       "possible train overlap, upper bound.")
         ),
     }
 
