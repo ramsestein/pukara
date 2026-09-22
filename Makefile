@@ -17,6 +17,8 @@ eval-full:
 		--out eval/results/carmen_pukara.json --bootstrap $(BOOTSTRAP) --seed $(SEED)
 	python -m eval.carmen --corpus data/carmen --mode presidio \
 		--out eval/results/presidio_carmen.json --bootstrap $(BOOTSTRAP) --seed $(SEED)
+	python -m eval.carmen --corpus data/carmen --mode presidio_es \
+		--out eval/results/presidio_es_carmen.json --bootstrap $(BOOTSTRAP) --seed $(SEED)
 	python -m eval.promptbench --mode combined \
 		--out eval/results/promptbench.json --seed $(SEED)
 	python -m eval.promptbench_heldout
@@ -31,11 +33,16 @@ eval-full:
 eval-test-frozen:
 	python -m eval.meddocan --corpus data/meddocan/corpus --split test --mode presidio \
 		--out eval/results/presidio_meddocan.json --bootstrap $(BOOTSTRAP) --seed $(SEED)
+	python -m eval.meddocan --corpus data/meddocan/corpus --split test --mode presidio_es \
+		--out eval/results/presidio_es_meddocan.json --bootstrap $(BOOTSTRAP) --seed $(SEED)
 	python -m eval.over_redaction --corpus data/meddocan/corpus --split test \
 		--mode combined --out eval/results/over_redaction_test.json \
 		--bootstrap $(BOOTSTRAP) --seed $(SEED)
 	python -m eval.over_redaction --corpus data/meddocan/corpus --split test \
 		--mode presidio --out eval/results/over_redaction_test_presidio.json \
+		--bootstrap $(BOOTSTRAP) --seed $(SEED)
+	python -m eval.over_redaction --corpus data/meddocan/corpus --split test \
+		--mode presidio_es --out eval/results/over_redaction_test_presidio_es.json \
 		--bootstrap $(BOOTSTRAP) --seed $(SEED)
 
 ## Ablación regex-only en dev (sin modelo).
