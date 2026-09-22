@@ -145,10 +145,14 @@ allowed by rule 2.
   the escape: round-trip is now 0/57 failures, `lost_brackets` 57.4 % (31/54)
   and `single_bracket` 88.9 % (48/54). The previously recorded 60.7 % / 89.3 %
   came from `eval-frozen-v1` (`f5f59f4`).
-- Presidio standalone document-level leakage is 100 % on MEDDOCAN test: the
-  leakage definitions include classes (FAMILY, PROFESSIONAL, …) that Presidio
-  does not map in `PRESIDIO_TO_UNIFIED`, and every document misses at least one
-  direct identifier. It is a baseline, not a candidate configuration.
+- Presidio standalone document-level leakage is 100 % on MEDDOCAN test. The
+  direct definition (EMAIL, NAME, PHONE, ID) is saturated because all 754 gold
+  `ID` spans are numeric identifiers (history numbers, social-security numbers,
+  plain numbers; none is DNI/NIE-shaped) and Presidio has no recognizer for
+  them, so every document misses at least one `ID` (see the `ID` note in
+  `docs/metrics.md`). The wide definition additionally counts the classes
+  (FAMILY, PROFESSION, …) that Presidio does not map in `PRESIDIO_TO_UNIFIED`.
+  It is a baseline, not a candidate configuration.
 
 ### Future work
 
@@ -163,7 +167,7 @@ allowed by rule 2.
 Executed on `main` from `4778b0e`, Spanish commits. Detector untouched:
 `git diff eval-frozen-v2 HEAD -- src/anonymizer.py` is limited to restoration/
 escape (`deanonymize`, `_restore_placeholder`, `_escape_*`, `_unescape_*`,
-`reset.original_tokens`, `__init__.restore_mode`); verified by
+`reset.original_tokens`); verified by
 `tests/test_frozen_detector.py`.
 
 ### What was run, with which hash
@@ -211,18 +215,30 @@ requires re-execution again.
 | Which class causes wide leakage, per system | `leakage.wide.attribution` in each of the three MEDDOCAN JSONs |
 | Over-redaction on test for the three systems | `over_redaction_test*.json`; per-component on dev in `over_redaction_dev.json` |
 | CIs consistent with the estimator (ratio vs mean) | `tests/test_ci_coverage.py`; §3.7 of `PROTOCOL.md` |
-| `strict` restoration by default, `lenient` trade-off | `utility.json` (`robustness`, `spurious_restorations` per mode) |
+| `strict` restoration (both brackets); single/lost brackets not recovered | `utility.json` (`robustness`, `spurious_restorations`) |
 | Detection frozen | `tests/test_frozen_detector.py` |
 
 ### Restoration policy (fourth pass)
 
-`PUKARA_RESTORE_MODE` selects the restoration policy: `strict` (default)
-requires both brackets; `lenient` also recovers `single_bracket`/`lost_brackets`
+`PUKARA_RESTORE_MODE` selected the restoration policy: `strict` (default)
+required both brackets; `lenient` also recovered `single_bracket`/`lost_brackets`
 at word boundaries and never over a token already present in the original
 prompt. Spurious restorations (placeholder-free texts altered): `strict` 0 %
 on both natural and adversarial samples; `lenient` 0 % natural / 100 %
-adversarial (31.8 % of characters). `lenient` `lost_brackets` recovery is
-16.7 % because the word-boundary safeguard leaves placeholders glued to the
-next word unrecovered (BERT fragments like `"H.\n"`, `"\nNAS"`); forcing them
-would risk spurious restorations.
+adversarial (31.8 % of characters).
+
+## Fifth pass — `lenient` restoration retired
+
+The optional `lenient` mode was removed. It recovered only 16.7 % of
+`lost_brackets` and 27.8 % of `single_bracket` (every other perturbation is
+already 100 % in `strict`), while altering 100 % of adversarial tag-like texts
+(31.8 % of characters) — a silent-integrity risk for an exact-restoration tool.
+Restoration is now `strict` only: `PUKARA_RESTORE_MODE` and
+`Anonymizer.restore_mode` are gone, and `utility.json` / `docs/metrics.md`
+report robustness and spurious restorations for `strict` alone.
+
+Changed: `src/anonymizer.py` (restore path), `eval/utility.py`,
+`eval/generate_metrics.py`, `tests/test_restore.py`, `docs/client.md`,
+`README.md`, `.env.example`, `utility.json` (regenerated), `docs/metrics.md`
+(regenerated). Detection untouched (`tests/test_frozen_detector.py`).
 
