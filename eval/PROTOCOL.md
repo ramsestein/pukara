@@ -114,10 +114,32 @@ concepto. IC bootstrap, semilla fija.
 
 - **Round-trip exacto:** `deanonymize(anonymize(x)) == x` byte a byte. Fallo =
   bug, no métrica.
-- **Robustez:** % de restauraciones correctas por tipo de perturbación.
+- **Robustez:** % de restauraciones correctas por tipo de perturbación, por modo
+  de restauración (`strict` por defecto, `lenient`; ver §3.7 de la cuarta
+  pasada).
 - **Restauraciones espurias:** falsos positivos de la regex de restauración
   sobre texto que contiene corchetes/guiones bajos legítimos (p. ej. JSON,
-  código).
+  código), por modo y composición de la muestra.
+
+### 3.7 Estimadores de IC (cuarta pasada)
+
+Cada métrica con IC usa el estimador coherente con su definición:
+
+| Métrica | Estimador | Función |
+|---|---|---|
+| F1 a nivel de palabra (agregado) | cociente agregado TP/FP/FN remuestreado | `bootstrap_f1_ci` |
+| F1 de span (estricto/relajado, agregado) | cociente agregado TP/FP/FN remuestreado | `bootstrap_f1_ci` |
+| Neutralización de PHI (cubiertos/total) | cociente agregado `sum/sum` | `bootstrap_ratio_ci` |
+| Sobre-redacción (tokens no-PHI alterados) | cociente agregado `sum/sum` | `bootstrap_ratio_ci` |
+| Espurias: % de caracteres alterados | cociente agregado `sum/sum` | `bootstrap_ratio_ci` |
+| Leakage por documento (wide/direct/any) | media por documento (0/1) | `bootstrap_ci` |
+| Atribución de leakage por clase | media por documento (0/1) | `bootstrap_ci` |
+| Espurias: % de textos alterados | media por muestra (0/1) | `bootstrap_ci` |
+
+Regla para el futuro: los scripts guardan TP/FP/FN y numerador/denominador por
+documento en el JSON (`per_doc`), de modo que ningún IC vuelva a requerir
+re-ejecución. `meddocan.json` (Pukara test) se re-ejecutó una vez con el
+detector congelado para capturar esos datos (ver `docs/dev/handoff.md`).
 
 ## 4. Reglas de decisión (Fase C)
 

@@ -111,17 +111,17 @@ report vulnerabilities.
 Pseudonymisation metrics are regenerated from versioned JSON files with
 `make eval` and reported in [`docs/metrics.md`](docs/metrics.md). The reported
 split is **MEDDOCAN `test`** (250 documents, out-of-distribution, run once).
-The table compares Pukara with the **Presidio standalone baseline** using the
+The table compares Pukara with two **Presidio standalone baselines** using the
 same evaluator (full numbers and the per-class table are in `docs/metrics.md`):
 
-| Metric (MEDDOCAN test) | Pukara | Presidio |
-|---|---|---|
-| Word F1 | 84.4 % | 59.1 % |
-| Span relaxed F1 | 83.6 % | 59.1 % |
-| PHI neutralization | 88.6 % | 56.2 % |
-| Leakage direct | 7.2 % | 100.0 % |
-| Leakage wide | 11.2 % | 100.0 % |
-| Over-redaction (non-PHI tokens altered) | 1.8 % | 2.9 % |
+| Metric (MEDDOCAN test) | Pukara | Presidio (OOTB) | Presidio (ES) |
+|---|---|---|---|
+| Word F1 | 84.4 % | 59.1 % | 59.6 % |
+| Span relaxed F1 | 83.6 % | 59.1 % | 57.2 % |
+| PHI neutralization | 88.6 % | 56.2 % | 62.3 % |
+| Leakage direct | 7.2 % | 100.0 % | 99.2 % |
+| Leakage wide | 11.2 % | 100.0 % | 99.2 % |
+| Over-redaction (non-PHI tokens altered) | 1.8 % | 2.9 % | 4.9 % |
 
 Over-redaction is the domain-agnostic metric that measures how much non-PHI
 text the detector rewrites; see `docs/metrics.md` for its bootstrap CI and the
@@ -141,10 +141,12 @@ upper bound (the model was fine-tuned on it).
 - **Over-redaction.** The detector rewrites 1.8 % of non-PHI tokens on test
   (CI 1.8–2.0 %), mostly BERT fragments and `name` rules firing on title-case
   clinical headers — see `docs/dev/eval-diagnosis.md`.
-- **Partial restoration on bracket loss.** Round-trip is exact (57/57), but when
-  an LLM drops the brackets of a placeholder, restoration is partial
-  (`lost_brackets` 57.4 %, `single_bracket` 88.9 %); ambiguous cases are not
-  forced to avoid spurious restorations.
+- **Restoration policy.** Round-trip is exact (57/57). Restoration of an
+  LLM-edited placeholder defaults to `strict` (both brackets required); the
+  optional `lenient` mode also recovers single/lost brackets but alters
+  placeholder-free text with tag-like tokens (adversarial samples: 0 % strict
+  vs 100 % lenient; 31.8 % of characters). See `docs/client.md` for how to
+  choose.
 - **Domain-concept retention is not measured by design.** Pukara is not
   clinical-domain-specific, so a clinical-concept retention metric would bias
   the evaluation to that domain; the domain-agnostic over-redaction metric is

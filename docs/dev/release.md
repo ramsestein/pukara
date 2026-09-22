@@ -43,23 +43,30 @@ truth), currently `0.2.0`.
   MIT license, version 0.2.0) and publish. The DOI is then added to the README
   metadata table (currently "Pending").
 
-## 4. Final checklist (third pass, not executed)
+## 4. Final checklist (fourth pass, not executed)
 
-1. `LICENSE` and `CITATION.cff` at the repository root (GitHub license detection
-   and "Cite this repository"; SoftwareX requires a visible license).
-2. `"dirty": false` in every `eval/results/*.json`.
-3. `make eval` produces no diff against the committed `eval/results/` and
-   `docs/metrics.md` (run it on a clean tree; the frozen test JSONs are not
-   touched).
-4. CI green across the full matrix (Python 3.9–3.12: ruff, pytest with ≥85 %
-   coverage on `secure.py`/`proxy.py`, pip-audit, Docker build).
-5. Tag `v0.2.0` and publish the GitHub release.
-6. Archive in Zenodo (new version for `v0.2.0`), obtain the DOI.
-7. Add the DOI to `README.md`, `CITATION.cff` and `.zenodo.json`.
-8. From here on, `eval/results/` is frozen (no regeneration).
+- [x] `LICENSE` and `CITATION.cff` at the repository root.
+- [x] `"dirty": false` in every `eval/results/*.json`.
+- [x] CI-equivalent checks green locally: `ruff check src tests eval`, `pytest`
+      (93 tests, coverage 91.5 % on `secure.py`/`proxy.py`), `pip-audit`.
+- [x] Detector frozen: `tests/test_frozen_detector.py` and
+      `git diff eval-frozen-v2 HEAD -- src/anonymizer.py` limited to
+      restoration/escape.
+- [x] Three-column comparison (Pukara / Presidio OOTB / Presidio ES) and
+      leakage attribution in `docs/metrics.md`.
+- [ ] Run `make eval` on a clean tree and commit any regenerated artifacts; the
+      frozen test JSONs are not touched by `make eval`.
+- [ ] CI green on GitHub across the full matrix (3.9–3.12 + Docker build).
+- [ ] Tag `v0.2.0` and publish the GitHub release.
+- [ ] Archive in Zenodo (new version for `v0.2.0`), obtain the DOI.
+- [ ] Add the DOI to `README.md`, `CITATION.cff` and `.zenodo.json`.
+- [ ] From here on, `eval/results/` is frozen (no regeneration).
+
+The tag, the Zenodo archive and the DOI are done **by the author by hand** when
+the release is approved.
 
 ## 5. SoftwareX submission
 
 - The DOI from step 3 goes into the SoftwareX manuscript metadata.
 - `docs/dev/handoff.md` lists which manuscript claims are backed by which
-  `eval/results/*.json` (sections "Second pass" and "Third pass").
+  `eval/results/*.json` (sections "Second pass", "Third pass" and "Fourth pass").

@@ -36,7 +36,10 @@ evaluation harness (`eval/`) and SoftwareX packaging. Details in
   adds `Complejo Hospitalario`/`Centro de Salud`, drops `H.`; 2.3 % → 1.7 %.
 - **Presidio**: optional third component (`PUKARA_ENABLE_PRESIDIO=1`), off by
   default; adds NAME/EMAIL/LOCATION gap-filling. The standalone baseline is
-  referenced from `ramsestein/presidio_carmen` (not re-run).
+  **re-run with the same evaluator** (`presidio_meddocan.json`,
+  `presidio_carmen.json`, third pass) and, since the fourth pass, also
+  configured for Spanish (`presidio_es_*`). The external
+  `ramsestein/presidio_carmen` is cited only as origin, not re-run.
 - **Phase D**: tolerant placeholder restoration (case-insensitive regex) and a
   BERT noise filter (drops 1-char fragments and pure numbers < 5 digits).
 
@@ -151,4 +154,72 @@ allowed by rule 2.
 3. Presidio integration for higher neutralization when the input is not
    pre-pseudonymised.
 4. HPKE/Noise-NK for forward secrecy (protocol, not leakage).
+
+## Fourth pass
+
+Executed on `main` from `4778b0e`, Spanish commits. Detector untouched:
+`git diff eval-frozen-v2 HEAD -- src/anonymizer.py` is limited to restoration/
+escape (`deanonymize`, `_restore_placeholder`, `_escape_*`, `_unescape_*`,
+`reset.original_tokens`, `__init__.restore_mode`); verified by
+`tests/test_frozen_detector.py`.
+
+### What was run, with which hash
+
+| Artifact | `code_revision` | Note |
+|---|---|---|
+| `meddocan.json` (Pukara test) | `33f22a2` | documented re-execution (frozen detector) |
+| `presidio_meddocan.json` / `presidio_es_meddocan.json` | `338431b` / `484f747` | OOTB / ES-configured baseline |
+| `presidio_carmen.json` / `presidio_es_carmen.json` | `91f1e27` / `42fae86` | same |
+| `over_redaction_test*.json` / `over_redaction_dev.json` | `e1d7fc4` … `9909a54` | ratio CI + per-doc |
+| `carmen_pukara.json` | `0a21274` | ratio CI + per-doc |
+| `ablate_dev_*.json` | `967c5f4` … `83094a6` | re-executed with frozen detector |
+| `utility.json` | `757b7f7` | strict/lenient robustness + spurious |
+
+### `meddocan.json` (Pukara test) re-execution — verification
+
+`b69ddd6` saved only aggregates (no per-document TP/FP/FN, no predicted spans),
+and the third-pass over-redaction re-execution (`edc8968`) saved only aggregate
+rates. Therefore bit-identity could only be verified at the **aggregate-metric**
+level, not span by span. The re-execution with the frozen detector reproduced
+every point value byte-for-byte (the only diff vs `b69ddd6` is the added
+metadata `presidio_meta: null`; `generated`/`code_revision`/`dirty`/`per_doc`
+are the expected additions). Since the metrics are deterministic functions of
+the predicted spans, identical aggregates imply identical spans. `per_doc`
+(TP/FP/FN and numerator/denominator per document) is now stored so no CI ever
+requires re-execution again.
+
+### Fase 2 diff (points changed vs previous commit)
+
+- `meddocan.json` (Pukara test): **no point value changed** (see above).
+- `ablate_dev_*.json`: the points **changed** because those files were generated
+  at `b468f31` (pre-freeze, Fase B/C) and the frozen detector (`eval-frozen-v2`,
+  Fase D) added the BERT noise filter. New dev ablation (frozen): regex word F1
+  0.7080, bert 0.8130, combined 0.8444, combined+Presidio 0.8087.
+- Everything else (Presidio, CARMEN, over-redaction, utility): points unchanged
+  where the detector is the same; `utility.json` changed by design (strict
+  default + per-mode measurement).
+
+### Manuscript claims and their backing JSON (fourth pass)
+
+| Claim | Backed by |
+|---|---|
+| Pukara vs Presidio OOTB vs Presidio ES on MEDDOCAN test (same evaluator, 3 columns) | `meddocan.json`, `presidio_meddocan.json`, `presidio_es_meddocan.json` |
+| Same 3-column comparison on CARMEN-I | `carmen_pukara.json`, `presidio_carmen.json`, `presidio_es_carmen.json` |
+| Which class causes wide leakage, per system | `leakage.wide.attribution` in each of the three MEDDOCAN JSONs |
+| Over-redaction on test for the three systems | `over_redaction_test*.json`; per-component on dev in `over_redaction_dev.json` |
+| CIs consistent with the estimator (ratio vs mean) | `tests/test_ci_coverage.py`; §3.7 of `PROTOCOL.md` |
+| `strict` restoration by default, `lenient` trade-off | `utility.json` (`robustness`, `spurious_restorations` per mode) |
+| Detection frozen | `tests/test_frozen_detector.py` |
+
+### Restoration policy (fourth pass)
+
+`PUKARA_RESTORE_MODE` selects the restoration policy: `strict` (default)
+requires both brackets; `lenient` also recovers `single_bracket`/`lost_brackets`
+at word boundaries and never over a token already present in the original
+prompt. Spurious restorations (placeholder-free texts altered): `strict` 0 %
+on both natural and adversarial samples; `lenient` 0 % natural / 100 %
+adversarial (31.8 % of characters). `lenient` `lost_brackets` recovery is
+16.7 % because the word-boundary safeguard leaves placeholders glued to the
+next word unrecovered (BERT fragments like `"H.\n"`, `"\nNAS"`); forcing them
+would risk spurious restorations.
 
