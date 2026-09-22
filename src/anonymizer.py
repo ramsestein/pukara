@@ -174,33 +174,61 @@ def _ph_num(ph: str) -> int:
     return int(num) if num.isdigit() else 0
 
 
-def _restore_placeholder(text: str, ph: str, orig: str) -> str:
+def _restore_placeholder(text: str, ph: str, orig: str,
+                         restore_mode: str = "strict",
+                         original_tokens=None) -> str:
     """Restaura un placeholder y sus perturbaciones toleradas.
 
-    Reconoce (insensible a mayúsculas): `[TAG_n]`, `**[TAG_n]**`, corchetes
-    ausentes o parciales, espacios entre tag y número, `[TAG_n]s`/`[TAG_n]'s`,
-    salto de línea entre tag y número, y la etiqueta traducida al inglés.
+    - `strict` (por defecto): exige ambos corchetes `[TAG_n]`. Tolera
+      mayúsculas/minúsculas, `**…**`, espacios internos, etiqueta traducida al
+      inglés, sufijos `s`/`'s` y salto de línea interno. No recupera
+      `single_bracket` ni `lost_brackets`.
+    - `lenient`: además `single_bracket` y `lost_brackets`, con dos
+      salvaguardas: solo en límite de palabra y **nunca** sobre un token que ya
+      aparecía en el prompt original (`original_tokens`, en minúscula).
+
+    Insensible a mayúsculas. El número no puede ir seguido de otro dígito
+    (evita que [NOMBRE_1] se cuele dentro de [NOMBRE_10]).
     """
     tag, num = _ph_parts(ph)
     aliases = _TAG_ALIASES.get(tag.upper(), (tag,))
     tag_alt = "(?:" + "|".join(re.escape(a) for a in aliases) + ")"
-    # El número no puede ir seguido de otro dígito (evita que [NOMBRE_1] se
-    # cuele dentro de [NOMBRE_10]). El sufijo plural/sajón (minúscula,
-    # case-sensitive) solo se admite tras un corchete de cierre. Con corchetes
-    # no se exige límite de palabra (un placeholder puede ir pegado a texto,
-    # p. ej. "CP[TELÉFONO_1]"); sin corchetes sí, para no cortar palabras.
     core = tag_alt + r"[\s_]*" + re.escape(num) + r"(?!\d)"
-    pat = re.compile(
-        r"\*{0,2}(?:"
-        + r"\[\s*" + core + r"\s*\](?-i:'s|s)?"   # [TAG_n] y [TAG_n]s
-        + r"|"
-        + r"\[\s*" + core                         # [TAG_n  (solo apertura)
-        + r"|"
-        + r"(?<![A-Za-z0-9])" + core + r"\s*\]?"  # TAG_n o TAG_n] (sin apertura)
-        + r")\*{0,2}",
-        re.IGNORECASE,
-    )
-    return pat.sub(orig, text)
+    bracket_alt = r"\[\s*" + core + r"\s*\](?-i:'s|s)?"
+    if restore_mode == "strict":
+        pat = re.compile(r"\*{0,2}(?:" + bracket_alt + r")\*{0,2}", re.IGNORECASE)
+    else:
+        pat = re.compile(
+            r"\*{0,2}(?:"
+            + bracket_alt
+            + r"|"
+            + r"\[\s*" + core + r"(?!\w)"                  # [TAG_n  (solo apertura)
+            + r"|"
+            + r"(?<![A-Za-z0-9])" + core + r"(?:\s*\]|(?!\w))"  # TAG_n o TAG_n] (sin apertura)
+            + r")\*{0,2}",
+            re.IGNORECASE,
+        )
+
+    if not original_tokens:
+        return pat.sub(orig, text)
+
+    token_spans = [(m.start(), m.end()) for m in re.finditer(r"\S+", text)]
+    token_texts = [text[s:e].lower() for s, e in token_spans]
+    ph_lower = ph.lower()
+
+    def _repl(m: re.Match) -> str:
+        # El placeholder exacto (con corchetes, salvo `**` y mayúsculas) es un
+        # placeholder generado: se restaura siempre.
+        if m.group(0).strip("*").lower() == ph_lower:
+            return orig
+        s, e = m.start(), m.end()
+        for (ts, te), tt in zip(token_spans, token_texts):
+            if ts < e and s < te:
+                if tt in original_tokens:
+                    return m.group(0)
+        return orig
+
+    return pat.sub(_repl, text)
 
 
 # ── Escape de placeholders literales (round-trip exacto) ──────────────────
@@ -532,6 +560,10 @@ class Anonymizer:
             use_presidio = raw in ("1", "true", "yes", "on")
         self.use_presidio = use_presidio
 
+        # Política de restauración: `strict` (por defecto) o `lenient`.
+        raw_mode = _read_env("PUKARA_RESTORE_MODE", "strict").strip().lower()
+        self.restore_mode = raw_mode if raw_mode in ("strict", "lenient") else "strict"
+
         model_path = self.model_dir / model_dirname()
         if not model_path.exists():
             raise FileNotFoundError(f"Modelo no encontrado: {model_path}")
@@ -551,6 +583,7 @@ class Anonymizer:
         self.ph_to_text = {}   # placeholder -> real text (reversal)
         self.counters = {}     # tag -> counter
         self.escapes = {}      # marcador -> placeholder literal (escape)
+        self.original_tokens = set()  # tokens del prompt original (salvaguarda)
 
     # ── Detección BERT ────────────────────────────────────────────────────
     def _bert_detect(self, text: str) -> list[dict]:
@@ -856,6 +889,9 @@ class Anonymizer:
 
     # ── Anonimización reversible ───────────────────────────────────────────
     def anonymize(self, text: str) -> str:
+        # Tokens del prompt original (minúscula) para la salvaguarda de no
+        # restaurar un token que el usuario ya escribió.
+        self.original_tokens = {t.lower() for t in re.findall(r"\S+", text)}
         text, self.escapes = _escape_literal_placeholders(text)
         for e in sorted(self.detect(text), key=lambda x: x["start"], reverse=True):
             orig = e["text"]
@@ -874,8 +910,11 @@ class Anonymizer:
         # Placeholders con número mayor primero, para no romper [NOMBRE_10]
         # al restaurar [NOMBRE_1] (además la regex exige que el número no vaya
         # seguido de más alfanuméricos).
+        restore_mode = getattr(self, "restore_mode", "strict")
+        original_tokens = getattr(self, "original_tokens", set())
         for ph, orig in sorted(self.ph_to_text.items(), key=lambda kv: _ph_num(kv[0]), reverse=True):
-            text = _restore_placeholder(text, ph, orig)
+            text = _restore_placeholder(text, ph, orig, restore_mode=restore_mode,
+                                        original_tokens=original_tokens)
         escapes = getattr(self, "escapes", {})
         if escapes:
             text = _unescape_literal_placeholders(text, escapes)

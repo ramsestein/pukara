@@ -10,10 +10,11 @@ from eval import utility
 from src import anonymizer
 
 
-def _make_anon():
+def _make_anon(mode="strict"):
     anon = anonymizer.Anonymizer.__new__(anonymizer.Anonymizer)
     anon.reset()
     anon.detect = anon._regex_detect
+    anon.restore_mode = mode
     return anon
 
 
@@ -30,7 +31,7 @@ def test_roundtrip_exacto():
 
 
 def test_perturbaciones_recuperan_entidades():
-    anon = _make_anon()
+    anon = _make_anon("lenient")
     anonymized = anon.anonymize(SAMPLE)
     text_to_ph = anon.text_to_ph
     assert text_to_ph  # debe haber detectado entidades
@@ -47,12 +48,11 @@ def test_no_restaura_placeholder_ausente():
     assert "[FECHA_7]" in out
 
 
-def test_variantes_restauracion():
-    anon = _make_anon()
+def test_variantes_restauracion_strict():
+    anon = _make_anon("strict")
     anon.ph_to_text = {"[NOMBRE_1]": "María"}
     assert anon.deanonymize("**[NOMBRE_1]**") == "María"
     assert anon.deanonymize("[NOMBRE_1]") == "María"
-    assert anon.deanonymize("NOMBRE_1") == "María"
     assert anon.deanonymize("[ NOMBRE _ 1 ]") == "María"
     assert anon.deanonymize("[NOMBRE_1]s") == "María"
     assert anon.deanonymize("[NOMBRE_1]'s") == "María"
@@ -60,6 +60,18 @@ def test_variantes_restauracion():
     assert anon.deanonymize("[NAME_1]") == "María"
     # mayúsculas
     assert anon.deanonymize("[nombre_1]") == "María"
+    # strict NO recupera sin corchetes ni con un solo corchete
+    assert anon.deanonymize("NOMBRE_1") == "NOMBRE_1"
+    assert anon.deanonymize("[NOMBRE_1") == "[NOMBRE_1"
+    assert anon.deanonymize("NOMBRE_1]") == "NOMBRE_1]"
+
+
+def test_variantes_restauracion_lenient():
+    anon = _make_anon("lenient")
+    anon.ph_to_text = {"[NOMBRE_1]": "María"}
+    assert anon.deanonymize("NOMBRE_1") == "María"
+    assert anon.deanonymize("[NOMBRE_1") == "María"
+    assert anon.deanonymize("NOMBRE_1]") == "María"
 
 
 def test_no_rompe_numero_mayor():
@@ -113,3 +125,33 @@ def test_roundtrip_placeholders_literales_propiedad(base):
     x = base + " Paciente: María García López, tel 600123456."
     out = anon.anonymize(x)
     assert anon.deanonymize(out) == x
+
+
+@settings(max_examples=200)
+@given(st.text(
+    alphabet=st.characters(whitelist_categories=("Ll", "Lu", "Nd"),
+                           whitelist_characters=" .,;:()_"),
+    max_size=80,
+))
+def test_strict_no_alterar_texto_sin_corchetes(base):
+    """Propiedad: en `strict` ningún texto sin corchetes se altera."""
+    anon = _make_anon("strict")
+    anon.ph_to_text = {"[NOMBRE_1]": "María", "[FECHA_1]": "12/05/2024"}
+    assert anon.deanonymize(base) == base
+
+
+@settings(max_examples=200)
+@given(st.text(
+    alphabet=st.characters(whitelist_categories=("Ll", "Lu", "Nd"),
+                           whitelist_characters=" []_*"),
+    max_size=60,
+))
+def test_no_restaurar_token_del_original(base):
+    """Propiedad: en ambos modos, un token presente en el prompt original
+    nunca se restaura (salvaguarda del original)."""
+    for mode in ("strict", "lenient"):
+        anon = _make_anon(mode)
+        anon.ph_to_text = {"[NOMBRE_1]": "María", "[FECHA_2]": "12/05/2024",
+                           "[ID_1]": "12345678Z"}
+        anon.original_tokens = {t.lower() for t in base.split()}
+        assert anon.deanonymize(base) == base, mode

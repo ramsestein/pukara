@@ -84,22 +84,59 @@ _NEUTRAL = [
 ]
 
 
-def generate_spurious_samples(seed: int = 42, n: int = 600) -> list:
+def generate_natural_samples(seed: int = 42, n: int = 300) -> list:
+    """Muestras naturales (código/JSON/SQL/CSV) sin tokens tipo placeholder.
+
+    Fuente: promptbench (dev y held-out) en categorías SQL/CSV y tabular, más
+    plantillas con claves neutras (no colisionan con ningún tag).
+    """
     rng = random.Random(seed)
     samples: list = []
 
-    # 1) Muestreo del promptbench (dev y held-out): categorías SQL/CSV y tabular.
     from eval import promptbench as pb
     from eval import promptbench_heldout as pb2
 
-    for p in pb.generate_prompts(seed=42, n=200):
+    for p in pb.generate_prompts(seed=42, n=1200):
         if p["id"] % 4 == 2:  # categoría SQL/CSV del promptbench dev
             samples.append(p["text"])
-    for p in pb2.generate_heldout_prompts(seed=2024, n=200):
+    for p in pb2.generate_heldout_prompts(seed=2024, n=1000):
         if p["id"] % 5 == 2:  # categoría tabular (CSV-like) del held-out
             samples.append(p["text"])
 
-    # 2) Plantillas: código, SQL, JSON, CSV y corchetes/guiones bajos legítimos.
+    i = 0
+    while len(samples) < n:
+        neu = _NEUTRAL[i % len(_NEUTRAL)]
+        neu2 = _NEUTRAL[(i + 1) % len(_NEUTRAL)]
+        r = rng.randint(100, 999)
+        kind = i % 4
+        if kind == 0:  # código
+            samples.append(
+                f"if (x > 0) {{ arr[{r}] = matrix[{r}][{r + 1}]; "
+                f"{neu}_{r} += {neu2}_{r}; }}"
+            )
+        elif kind == 1:  # JSON
+            samples.append(
+                f'{{"{neu}_{r}": {r}, "lista": [{r}, {r + 1}], '
+                f'"meta": {{"{neu2}_{r}": "x"}}}}'
+            )
+        elif kind == 2:  # SQL
+            samples.append(
+                f"SELECT {neu}_{r}, {neu2}_{r} FROM tabla WHERE id = {r};"
+            )
+        else:  # CSV
+            samples.append(
+                f"{neu}_{r},{neu2}_{r},valor\n{r},campo,{r}\n{r + 1},campo,{r}"
+            )
+        i += 1
+    return samples[:n]
+
+
+def generate_adversarial_samples(seed: int = 42, n: int = 300) -> list:
+    """Muestras adversariales con tokens tipo etiqueta insertados
+    deliberadamente (`nombre_1`, `[ID_2`, `FECHA_3]`, …).
+    """
+    rng = random.Random(seed)
+    samples: list = []
     i = 0
     while len(samples) < n:
         tag = _TAG_LIKE[i % len(_TAG_LIKE)]
@@ -107,32 +144,22 @@ def generate_spurious_samples(seed: int = 42, n: int = 600) -> list:
         num = (i % 2) + 1
         num2 = ((i + 1) % 2) + 1
         r = rng.randint(100, 999)
-        kind = i % 6
-        if kind == 0:  # código con guiones bajos neutros
-            samples.append(
-                f"if (x > 0) {{ arr[{r}] = matrix[{r}][{r + 1}]; "
-                f"{neu}_{num} += {neu}_{num2}; }}"
-            )
-        elif kind == 1:  # SQL con clave tipo tag (falso positivo)
+        kind = i % 4
+        if kind == 0:  # SQL con clave tipo tag
             samples.append(
                 f"SELECT {tag}_{num}, {neu}_{num2} FROM tabla WHERE id = {r};"
             )
-        elif kind == 2:  # JSON con clave tipo tag (falso positivo)
+        elif kind == 1:  # JSON con clave tipo tag
             samples.append(
                 f'{{"{tag}_{num}": {r}, "{neu}_{num2}": [{r}, {r + 1}]}}'
             )
-        elif kind == 3:  # CSV con cabecera neutra
+        elif kind == 2:  # corchete abierto (single_bracket, solo lenient)
             samples.append(
-                f"{neu}_{num},{neu}_{num2},valor\n{r},campo,{r}\n{r + 1},campo,{r}"
+                f"corchete abierto: [{tag.upper()}_{num} y {neu}_{num2}."
             )
-        elif kind == 4:  # JSON con clave neutra
+        else:  # corchete cerrado (single_bracket, solo lenient)
             samples.append(
-                f'{{"{neu}_{num}": "a@b.es", "{neu}_{num2}": "600123456"}}'
-            )
-        else:  # markdown/corchetes legítimos (sin placeholder real)
-            samples.append(
-                f"Markdown: [enlace](https://example.com/{r}) y nota[{r}]. "
-                f"Placeholder ajeno: [NOMBRE_{r}] y [FECHA_{r}]."
+                f"corchete cerrado: {tag}_{num}] y {neu}_{num2}."
             )
         i += 1
     return samples[:n]
@@ -148,6 +175,42 @@ def _char_delta(a: str, b: str) -> int:
     )
 
 
+def _measure_spurious(anon, samples: list) -> dict:
+    """% de textos alterados y % de caracteres alterados por `deanonymize`."""
+    altered = []
+    per_altered = []
+    per_num = []
+    per_den = []
+    total_chars = 0
+    altered_chars = 0
+    for sample in samples:
+        restored = anon.deanonymize(sample)
+        total_chars += len(sample)
+        if restored != sample:
+            altered.append({"sample": sample, "restored": restored})
+            per_altered.append(1)
+            diff = _char_delta(sample, restored)
+            altered_chars += diff
+            per_num.append(diff)
+            per_den.append(len(sample))
+        else:
+            per_altered.append(0)
+            per_num.append(0)
+            per_den.append(len(sample))
+    return {
+        "samples": len(samples),
+        "altered": len(altered),
+        "rate": round(len(altered) / len(samples), 4) if samples else 0.0,
+        "rate_ci95": [round(x, 4) for x in common.bootstrap_ci(per_altered)],
+        "altered_chars": altered_chars,
+        "total_chars": total_chars,
+        "char_rate": round(altered_chars / total_chars, 4) if total_chars else 0.0,
+        "char_rate_ci95": [round(x, 4) for x in
+                          common.bootstrap_ratio_ci(per_num, per_den)],
+        "examples": altered[:5],
+    }
+
+
 def roundtrip(texts, predictor):
     failures = []
     for text in texts:
@@ -159,15 +222,15 @@ def roundtrip(texts, predictor):
     return failures
 
 
-def robustness(texts, predictor):
+def robustness(texts, predictor, mode: str):
     """% de textos donde TODAS las entidades originales se recuperan tras la
-    perturbación (no se exige round-trip exacto: la perturbación altera también
-    el texto no-PHI, p. ej. `uppercase`).
+    perturbación, para un modo de restauración (`strict` o `lenient`).
 
     Se anonimiza una sola vez por texto (la anonimización es determinista e
     independiente de la perturbación); después se aplican todas las
     perturbaciones sobre el mismo texto anonimizado.
     """
+    predictor._anon.restore_mode = mode  # noqa: SLF001
     results = {name: {"restored": 0, "total": 0} for name in PERTURBATIONS}
     for text in texts:
         anonymized, text_to_ph = predictor.anonymize(text)
@@ -183,61 +246,38 @@ def robustness(texts, predictor):
     return results
 
 
-def spurious_restorations(predictor, seed=42, n=600):
-    """Tasa de restauraciones espurias de la regex tolerante.
+def spurious_restorations(predictor, seed=42, natural_n=300, adversarial_n=300):
+    """Tasa de restauraciones espurias por modo (`strict`/`lenient`) y por
+    composición de la muestra (natural / adversarial).
 
     Construye un mapa sintético con todos los placeholders `[TAG_1..2]` y
-    aplica `deanonymize` a textos **sin placeholders** (código, SQL, JSON,
-    CSV, corchetes/guiones bajos legítimos). Cuenta cuántas muestras se alteran
-    (falso positivo) y qué porcentaje de caracteres se altera, con IC bootstrap.
+    aplica `deanonymize` a textos sin placeholders. `original_tokens` va vacío
+    (escenario peor: el modelo genera un token tipo etiqueta que no estaba en el
+    prompt); la salvaguarda del original se verifica en los tests de propiedad.
     """
     from src import anonymizer as _an
 
-    anon = _an.Anonymizer.__new__(_an.Anonymizer)
-    anon.reset()
-    for tag in _an.TAGS.values():
-        for n_ in (1, 2):
-            anon.ph_to_text[f"[{tag}_{n_}]"] = f"<valor:{tag}:{n_}>"
+    def _make_anon(mode):
+        anon = _an.Anonymizer.__new__(_an.Anonymizer)
+        anon.reset()
+        anon.restore_mode = mode
+        anon.original_tokens = set()
+        for tag in _an.TAGS.values():
+            for n_ in (1, 2):
+                anon.ph_to_text[f"[{tag}_{n_}]"] = f"<valor:{tag}:{n_}>"
+        return anon
 
-    samples = generate_spurious_samples(seed=seed, n=n)
-    altered = []
-    per_sample_altered = []
-    per_sample_char_rate = []
-    total_chars = 0
-    altered_chars = 0
-    for sample in samples:
-        restored = anon.deanonymize(sample)
-        total_chars += len(sample)
-        if restored != sample:
-            altered.append({"sample": sample, "restored": restored})
-            per_sample_altered.append(1)
-            diff = _char_delta(sample, restored)
-            altered_chars += diff
-            per_sample_char_rate.append(diff / len(sample) if len(sample) else 0.0)
-        else:
-            per_sample_altered.append(0)
-            per_sample_char_rate.append(0.0)
+    natural = generate_natural_samples(seed, natural_n)
+    adversarial = generate_adversarial_samples(seed, adversarial_n)
 
-    return {
-        "samples": len(samples),
-        "altered": len(altered),
-        "rate": round(len(altered) / len(samples), 4) if samples else 0.0,
-        "rate_ci95": [round(x, 4) for x in
-                      common.bootstrap_ci(per_sample_altered)],
-        "altered_chars": altered_chars,
-        "total_chars": total_chars,
-        "char_rate": round(altered_chars / total_chars, 4) if total_chars else 0.0,
-        "char_rate_ci95": [round(x, 4) for x in
-                          common.bootstrap_ci(per_sample_char_rate)],
-        "examples": altered[:10],
-        "notes": [
-            "Samples: promptbench dev (SQL/CSV) and held-out (tabular) categories, "
-            "plus templated code/SQL/JSON/CSV and bracket/underscore text (n>=500).",
-            "Tag-like lowercase keys (nombre_1, fecha_2, ...) are the false-positive "
-            "triggers of the tolerant (case-insensitive) restoration regex; neutral "
-            "keys and [TAG_99]-style strings are not restored.",
-        ],
-    }
+    out = {}
+    for mode in ("strict", "lenient"):
+        anon = _make_anon(mode)
+        out[mode] = {
+            "natural": _measure_spurious(anon, natural),
+            "adversarial": _measure_spurious(anon, adversarial),
+        }
+    return out
 
 
 def main() -> int:
@@ -248,7 +288,7 @@ def main() -> int:
                         default="combined")
     parser.add_argument("--model-dir", default=None)
     parser.add_argument("--out", default="eval/results/utility.json")
-    parser.add_argument("--spurious-n", type=int, default=600)
+    parser.add_argument("--spurious-n", type=int, default=300)
     parser.add_argument("--spurious-seed", type=int, default=42)
     args = parser.parse_args()
 
@@ -265,9 +305,13 @@ def main() -> int:
 
     predictor = common.Predictor(args.mode, args.model_dir)
     failures = roundtrip(texts, predictor)
-    rob = robustness(texts, predictor)
+    rob = {
+        "strict": robustness(texts, predictor, "strict"),
+        "lenient": robustness(texts, predictor, "lenient"),
+    }
     spurious = spurious_restorations(predictor, seed=args.spurious_seed,
-                                     n=args.spurious_n)
+                                     natural_n=args.spurious_n,
+                                     adversarial_n=args.spurious_n)
 
     result = {
         "script": "eval/utility.py",
@@ -283,15 +327,15 @@ def main() -> int:
         "robustness": rob,
         "spurious_restorations": spurious,
         "notes": [
-            "Round-trip failures are bugs, not metrics.",
-            "Literal placeholders in the input ([NOMBRE_1], nested, malformed) are "
-            "escaped on anonymize and unescaped after deanonymize, so round-trip "
-            "is exact even for those adversarial texts (audit A9).",
+            "Round-trip failures are bugs, not metrics; round-trip is exact in "
+            "strict mode (default).",
             "Perturbations mimic deterministic LLM edits to placeholders; the "
-            "rate is the share of texts where ALL original entities are recovered.",
-            "spurious_restorations: share of legit placeholder-free texts (code, "
-            "SQL, JSON, CSV, brackets/underscores) altered by the tolerant "
-            "restoration regex (false positives), plus share of altered characters.",
+            "rate is the share of texts where ALL original entities are recovered, "
+            "per restoration mode (strict/lenient).",
+            "spurious_restorations: share of placeholder-free texts altered by "
+            "deanonymize, per mode (strict/lenient) and sample composition "
+            "(natural code/JSON/SQL/CSV vs adversarial tag-like tokens), plus share "
+            "of altered characters.",
         ],
     }
 
@@ -301,7 +345,7 @@ def main() -> int:
                    encoding="utf-8")
     print(
         f"[utility] roundtrip failures={len(failures)}, "
-        f"robustness={ {k: v['rate'] for k, v in rob.items()} }"
+        f"robustness(strict)={ {k: v['rate'] for k, v in rob['strict'].items()} }"
     )
     return 0
 
