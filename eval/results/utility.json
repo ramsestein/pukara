@@ -1,7 +1,7 @@
 {
   "script": "eval/utility.py",
-  "generated": "2026-09-22T04:28:50.420926Z",
-  "code_revision": "e1c39b2ef44086ccab5024b4c993b7d7995580cc",
+  "generated": "2026-09-22T04:33:54.812903Z",
+  "code_revision": "757b7f786060f5d8ab229dbb3148240a833d4a95",
   "dirty": false,
   "roundtrip": {
     "texts": 57,
@@ -32,9 +32,9 @@
         "rate": 0.0
       },
       "space_inner": {
-        "restored": 2,
+        "restored": 54,
         "total": 54,
-        "rate": 0.037
+        "rate": 1.0
       },
       "label_translated": {
         "restored": 54,
@@ -79,9 +79,9 @@
         "rate": 0.2778
       },
       "space_inner": {
-        "restored": 2,
+        "restored": 54,
         "total": 54,
-        "rate": 0.037
+        "rate": 1.0
       },
       "label_translated": {
         "restored": 54,
