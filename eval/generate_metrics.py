@@ -51,9 +51,12 @@ def main() -> int:
     meddocan = load("meddocan.json")
     carmen = load("carmen_pukara.json")
     presidio_meddocan = load("presidio_meddocan.json")
+    presidio_es_meddocan = load("presidio_es_meddocan.json")
     presidio_carmen = load("presidio_carmen.json")
+    presidio_es_carmen = load("presidio_es_carmen.json")
     over_redaction_test = load("over_redaction_test.json")
     over_redaction_test_presidio = load("over_redaction_test_presidio.json")
+    over_redaction_test_presidio_es = load("over_redaction_test_presidio_es.json")
     over_redaction_dev = load("over_redaction_dev.json")
     abl = {
         "regex": load("ablate_dev_regex.json"),
@@ -90,63 +93,99 @@ def main() -> int:
     ]
 
     if meddocan:
-        pm = presidio_meddocan
+        systems = [
+            ("Pukara", meddocan),
+            ("Presidio (OOTB)", presidio_meddocan),
+            ("Presidio (ES)", presidio_es_meddocan),
+        ]
         lines += [
-            "_Rows: **Pukara** (`meddocan.json`) and the **Presidio standalone "
-            "baseline** (`presidio_meddocan.json`), same evaluator, same metrics._",
+            "_Pukara vs the Presidio standalone baselines (out-of-the-box and "
+            "configured for Spanish), same evaluator, same metrics._",
             "",
-            "| Metric | Pukara | Presidio |",
-            "|---|---|---|",
-            f"| Word F1 | {_f1_ci(meddocan['word_level'])} | {_f1_ci(pm['word_level']) if pm else '—'} |",
-            f"| Span strict F1 | {_f1(meddocan['span_strict'])} | {_f1(pm['span_strict']) if pm else '—'} |",
-            f"| Span relaxed F1 | {_f1_ci(meddocan['span_relaxed'])} | {_f1_ci(pm['span_relaxed']) if pm else '—'} |",
-            f"| PHI neutralization | {_rate(meddocan['phi_neutralization'])} | {_rate(pm['phi_neutralization']) if pm else '—'} |",
-            f"| Leakage wide | {_rate(meddocan['leakage']['wide'])} | {_rate(pm['leakage']['wide']) if pm else '—'} |",
-            f"| Leakage direct | {_rate(meddocan['leakage']['direct'])} | {_rate(pm['leakage']['direct']) if pm else '—'} |",
+            "| Metric | " + " | ".join(n for n, _ in systems) + " |",
+            "|" + "---|" * (len(systems) + 1),
+        ]
+
+        def _row(fn):
+            return " | ".join(fn(d) if d else "—" for _, d in systems)
+
+        lines += [
+            f"| Word F1 | {_row(lambda d: _f1_ci(d['word_level']))} |",
+            f"| Span strict F1 | {_row(lambda d: _f1(d['span_strict']))} |",
+            f"| Span relaxed F1 | {_row(lambda d: _f1_ci(d['span_relaxed']))} |",
+            f"| PHI neutralization | {_row(lambda d: _rate(d['phi_neutralization']))} |",
+            f"| Leakage wide | {_row(lambda d: _rate(d['leakage']['wide']))} |",
+            f"| Leakage direct | {_row(lambda d: _rate(d['leakage']['direct']))} |",
             "",
-            f"- Pukara revision `{meddocan['code_revision'][:12]}`"
-            + (f", Presidio revision `{pm['code_revision'][:12]}`." if pm else "."),
+            f"- Pukara revision `{meddocan['code_revision'][:12]}`; "
+            f"Presidio revision `{presidio_meddocan['code_revision'][:12] if presidio_meddocan else '—'}`; "
+            f"Presidio ES revision `{presidio_es_meddocan['code_revision'][:12] if presidio_es_meddocan else '—'}`.",
             "",
         ]
 
-        if pm:
-            labels = sorted(set(meddocan["per_class"]) | set(pm["per_class"]))
-            lines += [
-                "### Per-class (span strict): Pukara vs Presidio",
-                "",
-                "| Class | Pukara F1 | Pukara P / R | Support | Presidio F1 | Presidio P / R | Support |",
-                "|---|---|---|---|---|---|---|",
-            ]
-            for lab in labels:
-                c = meddocan["per_class"].get(lab)
-                p = pm["per_class"].get(lab)
-
-                def _cells(x):
-                    if not x:
-                        return "— | — / — | —"
-                    return (
+        labels = sorted(set().union(*[
+            set((d or {}).get("per_class", {})) for _, d in systems
+        ]))
+        lines += [
+            "### Per-class (span strict)",
+            "",
+            "| Class | " + " | ".join(
+                f"{n} F1 | {n} P / R | {n} support" for n, _ in systems) + " |",
+            "|" + "---|" * (3 * len(systems) + 1),
+        ]
+        for lab in labels:
+            cells = []
+            for _, d in systems:
+                x = (d or {}).get("per_class", {}).get(lab)
+                if x:
+                    cells.append(
                         f"{_f1(x)} | {_pct(x['precision'])} / {_pct(x['recall'])} "
                         f"| {x['support']}"
                     )
+                else:
+                    cells.append("— | — / — | —")
+            lines.append(f"| {lab} | " + " | ".join(cells) + " |")
 
-                lines.append(f"| {lab} | {_cells(c)} | {_cells(p)} |")
-            wins = [
-                lab for lab in labels
-                if meddocan["per_class"].get(lab) and pm["per_class"].get(lab)
-                and pm["per_class"][lab]["support"] > 0
-                and pm["per_class"][lab]["f1"] > meddocan["per_class"][lab]["f1"]
-            ]
-            lines += [
-                "",
-                "_Classes where the Presidio baseline wins on strict F1: "
-                f"{', '.join(sorted(wins)) if wins else 'none (Pukara wins or ties on every class with gold support)'}._",
-                "",
-                "_Person names are merged into `NAME` (any person name gets the same "
-                "pseudonymisation treatment); see `eval/PROTOCOL.md`. Residual classes "
-                "below 10% F1 in Pukara: `ORGANIZATION` has no dedicated regex rule and "
-                "the CARMEN-trained BERT predicts few organizations (low support)._",
-                "",
-            ]
+        es_wins = [
+            lab for lab in labels
+            if meddocan["per_class"].get(lab)
+            and presidio_es_meddocan
+            and presidio_es_meddocan["per_class"].get(lab)
+            and presidio_es_meddocan["per_class"][lab]["support"] > 0
+            and presidio_es_meddocan["per_class"][lab]["f1"] > meddocan["per_class"][lab]["f1"]
+        ]
+        lines += [
+            "",
+            "_Classes where the configured Presidio (ES) baseline wins on strict F1: "
+            f"{', '.join(sorted(es_wins)) if es_wins else 'none (Pukara wins or ties on every class with gold support)'}._",
+            "",
+            "_Person names are merged into `NAME` (any person name gets the same "
+            "pseudonymisation treatment); see `eval/PROTOCOL.md`._",
+            "",
+        ]
+
+        # Desglose de la fuga amplia por clase (por sistema).
+        attr_labels = sorted({k for _, d in systems if d
+                              for k in (d["leakage"]["wide"].get("attribution") or {})},
+                             key=lambda k: (k != "multiple", k))
+        lines += [
+            "### Leakage wide attribution (which class causes the leak)",
+            "",
+            "| Attribution | " + " | ".join(n for n, _ in systems) + " |",
+            "|" + "---|" * (len(systems) + 1),
+        ]
+        for k in attr_labels:
+            row = []
+            for _, d in systems:
+                a = (d["leakage"]["wide"].get("attribution") or {}).get(k) if d else None
+                row.append(_rate(a) if a else "—")
+            lines.append(f"| {k} | " + " | ".join(row) + " |")
+        lines += [
+            "",
+            "_`solo_<CLASS>` = documents whose wide leak is caused only by that class; "
+            "`multiple` = documents leaking more than one class._",
+            "",
+        ]
 
         lines += [
             "### Ablation on dev (not reportable; shows how the configuration was chosen)",
@@ -175,25 +214,31 @@ def main() -> int:
 
     lines += ["## CARMEN-I (secondary, in-distribution upper bound)", ""]
     if carmen:
-        pc = presidio_carmen
+        systems = [
+            ("Pukara", carmen),
+            ("Presidio (OOTB)", presidio_carmen),
+            ("Presidio (ES)", presidio_es_carmen),
+        ]
         lines += [
             "_Pukara: the BERT model is fine-tuned on CARMEN-I; in-distribution, "
-            "possible train overlap, upper bound. The Presidio row is the standalone "
-            "baseline with the same evaluator._",
+            "possible train overlap, upper bound. Presidio rows are the standalone "
+            "baselines with the same evaluator._",
             "",
-            "| Metric | Pukara | Presidio |",
-            "|---|---|---|",
-            f"| Documents | {carmen['documents']} | {pc['documents'] if pc else '—'} |",
-            f"| Word F1 | {_f1(carmen['word_level'])} | {_f1(pc['word_level']) if pc else '—'} |",
-            f"| Span strict F1 | {_f1(carmen['span_strict'])} | {_f1(pc['span_strict']) if pc else '—'} |",
-            f"| Span relaxed F1 | {_f1(carmen['span_relaxed'])} | {_f1(pc['span_relaxed']) if pc else '—'} |",
-            f"| PHI neutralization | {_pct(carmen['phi_neutralization']['rate'])} | {_pct(pc['phi_neutralization']['rate']) if pc else '—'} |",
-            f"| Leakage wide | {_rate(carmen['leakage']['wide'])} | {_rate(pc['leakage']['wide']) if pc else '—'} |",
-            f"| Leakage direct | {_rate(carmen['leakage']['direct'])} | {_rate(pc['leakage']['direct']) if pc else '—'} |",
-            "_CARMEN-I contains many documents with no gold PHI; the per-document "
-            "bootstrap CI of F1/neutralization is therefore dominated by empty "
-            "documents and is omitted here (only leakage CI, a document-level mean, "
-            "is shown). The full CI arrays are in the JSON files._",
+            "| Metric | " + " | ".join(n for n, _ in systems) + " |",
+            "|" + "---|" * (len(systems) + 1),
+        ]
+
+        def _row(fn):
+            return " | ".join(fn(d) if d else "—" for _, d in systems)
+
+        lines += [
+            f"| Documents | {_row(lambda d: str(d['documents']))} |",
+            f"| Word F1 | {_row(lambda d: _f1_ci(d['word_level']))} |",
+            f"| Span strict F1 | {_row(lambda d: _f1(d['span_strict']))} |",
+            f"| Span relaxed F1 | {_row(lambda d: _f1_ci(d['span_relaxed']))} |",
+            f"| PHI neutralization | {_row(lambda d: _rate(d['phi_neutralization']))} |",
+            f"| Leakage wide | {_row(lambda d: _rate(d['leakage']['wide']))} |",
+            f"| Leakage direct | {_row(lambda d: _rate(d['leakage']['direct']))} |",
             "",
             "_The external `ramsestein/presidio_carmen` repository is cited only as a "
             "source evaluation (`es_core_news_md`, 1,000 docs, character Jaccard) and "
@@ -205,15 +250,15 @@ def main() -> int:
 
     lines += ["## Over-redaction (non-PHI tokens altered)", ""]
     if over_redaction_test:
-        p = over_redaction_test_presidio
-        o = over_redaction_test["over_redaction"]
         lines += [
             "Domain-agnostic metric: share of whitespace tokens that are **not** PHI "
             "in gold but fall inside a predicted span (lower is better).",
             "",
-            "| Split | Pukara | Presidio |",
-            "|---|---|---|",
-            f"| MEDDOCAN test | {_rate(o)} | {_rate(p['over_redaction']) if p else '—'} |",
+            "| Split | Pukara | Presidio (OOTB) | Presidio (ES) |",
+            "|---|---|---|---|",
+            f"| MEDDOCAN test | {_rate(over_redaction_test['over_redaction'])} | "
+            f"{_rate(over_redaction_test_presidio['over_redaction']) if over_redaction_test_presidio else '—'} | "
+            f"{_rate(over_redaction_test_presidio_es['over_redaction']) if over_redaction_test_presidio_es else '—'} |",
             "",
         ]
         if over_redaction_dev:
@@ -264,34 +309,46 @@ def main() -> int:
     lines += ["## Utility preservation (restoration robustness)", ""]
     if utility:
         rt = utility["roundtrip"]
-        sp = utility["spurious_restorations"]
         lines += [
             f"- Round-trip exact (`deanonymize(anonymize(x)) == x`): "
             f"{rt['failures']} failures / {rt['texts']} texts ({_pct(rt['rate'])}). "
-            "Literal placeholders in the input (`[NOMBRE_1]`, nested or malformed) "
-            "are escaped on anonymize and unescaped after deanonymize, so round-trip "
-            "is exact even for those adversarial texts.",
-            f"- Spurious restorations: {sp['altered']}/{sp['samples']} placeholder-free "
-            f"samples altered ({_pct(sp['rate'])}, CI "
-            f"{_pct(sp['rate_ci95'][0])}–{_pct(sp['rate_ci95'][1])}); "
-            f"{_pct(sp['char_rate'])} of characters altered.",
+            "Literal placeholders in the input are escaped on anonymize and "
+            "unescaped after deanonymize, so round-trip is exact.",
             "",
-            "| Perturbation | Restored | Rate |",
-            "|---|---|---|",
         ]
-        for name, r in utility["robustness"].items():
-            lines.append(f"| {name} | {r['restored']}/{r['total']} | {_pct(r['rate'])} |")
-        lost = utility["robustness"]["lost_brackets"]
-        single = utility["robustness"]["single_bracket"]
+        for mode in ("strict", "lenient"):
+            rob = utility["robustness"][mode]
+            lines += [
+                f"### Robustness — restore mode `{mode}`",
+                "",
+                "| Perturbation | Restored | Rate |",
+                "|---|---|---|",
+            ]
+            for name, r in rob.items():
+                lines.append(
+                    f"| {name} | {r['restored']}/{r['total']} | {_pct(r['rate'])} |")
+            lines.append("")
+
+        lines += [
+            "### Spurious restorations (placeholder-free texts altered by `deanonymize`)",
+            "",
+            "| Mode | Composition | Altered | Rate | Chars altered |",
+            "|---|---|---|---|---|",
+        ]
+        for mode in ("strict", "lenient"):
+            for comp in ("natural", "adversarial"):
+                s = utility["spurious_restorations"][mode][comp]
+                lines.append(
+                    f"| {mode} | {comp} | {s['altered']}/{s['samples']} | "
+                    f"{_rate(s)} | {_pct(s['char_rate'])} |"
+                )
         lines += [
             "",
-            f"_`lost_brackets` ({_pct(lost['rate'])}): removing both brackets leaves "
-            "no unambiguous anchor, so only placeholders whose tag+number is "
-            "word-bounded are recovered; forcing the rest (glued to adjacent words, "
-            "or bare `tag_n` inside other identifiers) would cause spurious "
-            f"restorations. `single_bracket` ({_pct(single['rate'])}): a lone bracket "
-            "is ambiguous with prose, so only `[TAG_n` / `TAG_n]` forms at a word "
-            "boundary are recovered; the rest are left untouched for the same reason._",
+            "_`strict` (default) requires both brackets; `lenient` also recovers "
+            "single/lost brackets at word boundaries, never over a token already "
+            "present in the original prompt (see `docs/client.md`). `natural` = "
+            "code/JSON/SQL/CSV without tag-like tokens; `adversarial` = samples with "
+            "deliberately inserted tag-like tokens (`nombre_1`, `[ID_2`, `FECHA_3]`).",
             "",
         ]
     else:

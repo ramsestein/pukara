@@ -18,48 +18,61 @@ are produced by scripts in `eval/` and versioned under `eval/results/`.
 
 ## MEDDOCAN test (out-of-distribution, single run)
 
-_Rows: **Pukara** (`meddocan.json`) and the **Presidio standalone baseline** (`presidio_meddocan.json`), same evaluator, same metrics._
+_Pukara vs the Presidio standalone baselines (out-of-the-box and configured for Spanish), same evaluator, same metrics._
 
-| Metric | Pukara | Presidio |
-|---|---|---|
-| Word F1 | 84.4% (CI 83.9%–85.5%) | 59.1% (CI 57.9%–59.9%) |
-| Span strict F1 | 59.2% | 43.7% |
-| Span relaxed F1 | 83.6% (CI 83.2%–84.8%) | 59.1% (CI 58.4%–60.4%) |
-| PHI neutralization | 88.6% (CI 88.2%–90.0%) | 56.2% (CI 55.5%–57.2%) |
-| Leakage wide | 11.2% (CI 7.2%–15.2%) | 100.0% (CI 100.0%–100.0%) |
-| Leakage direct | 7.2% (CI 4.4%–10.4%) | 100.0% (CI 100.0%–100.0%) |
+| Metric | Pukara | Presidio (OOTB) | Presidio (ES) |
+|---|---|---|---|
+| Word F1 | 84.4% (CI 83.6%–85.3%) | 59.1% (CI 58.0%–60.1%) | 59.6% (CI 58.6%–60.7%) |
+| Span strict F1 | 59.2% | 43.7% | 41.8% |
+| Span relaxed F1 | 83.6% (CI 82.7%–84.4%) | 59.1% (CI 58.0%–60.2%) | 57.2% (CI 55.9%–58.3%) |
+| PHI neutralization | 88.6% (CI 87.5%–89.6%) | 56.2% (CI 55.2%–57.2%) | 62.3% (CI 61.1%–63.5%) |
+| Leakage wide | 11.2% (CI 7.2%–15.2%) | 100.0% (CI 100.0%–100.0%) | 99.2% (CI 98.0%–100.0%) |
+| Leakage direct | 7.2% (CI 4.4%–10.4%) | 100.0% (CI 100.0%–100.0%) | 99.2% (CI 98.0%–100.0%) |
 
-- Pukara revision `b69ddd6eb202`, Presidio revision `31ccec3edeae`.
+- Pukara revision `33f22a26d1a0`; Presidio revision `338431b84fcd`; Presidio ES revision `484f747499ca`.
 
-### Per-class (span strict): Pukara vs Presidio
+### Per-class (span strict)
 
-| Class | Pukara F1 | Pukara P / R | Support | Presidio F1 | Presidio P / R | Support |
-|---|---|---|---|---|---|---|
-| AGE | 86.0% | 80.7% / 92.1% | 518 | 0.0% | 0.0% / 0.0% | 518 |
-| DATE | 78.6% | 71.7% / 87.1% | 611 | 88.4% | 95.1% / 82.7% | 611 |
-| EMAIL | 98.6% | 98.0% / 99.2% | 249 | 95.4% | 99.1% / 92.0% | 249 |
-| FAMILY | 41.8% | 32.6% / 58.0% | 81 | 0.0% | 0.0% / 0.0% | 81 |
-| HOSPITAL | 43.0% | 34.4% / 57.4% | 136 | 0.0% | 0.0% / 0.0% | 136 |
-| ID | 29.1% | 25.4% / 34.1% | 754 | 0.0% | 0.0% / 0.0% | 754 |
-| LOCATION | 49.8% | 57.1% / 44.2% | 1732 | 38.6% | 32.2% / 48.3% | 1732 |
-| NAME | 50.4% | 48.0% / 53.0% | 1003 | 46.4% | 41.1% / 53.4% | 1003 |
-| ORGANIZATION | 2.2% | 4.5% / 1.5% | 67 | 0.0% | 0.0% / 0.0% | 67 |
-| OTHER | 0.0% | 0.0% / 0.0% | 7 | 0.0% | 0.0% / 0.0% | 7 |
-| PHONE | 16.2% | 8.9% / 97.0% | 33 | 0.0% | 0.0% / 0.0% | 33 |
-| PROFESSION | 48.0% | 37.5% / 66.7% | 9 | 0.0% | 0.0% / 0.0% | 9 |
-| SEX | 59.0% | 90.2% / 43.8% | 461 | 0.0% | 0.0% / 0.0% | 461 |
-| URL | — | — / — | — | 0.0% | 0.0% / 0.0% | 0 |
+| Class | Pukara F1 | Pukara P / R | Pukara support | Presidio (OOTB) F1 | Presidio (OOTB) P / R | Presidio (OOTB) support | Presidio (ES) F1 | Presidio (ES) P / R | Presidio (ES) support |
+|---|---|---|---|---|---|---|---|---|---|
+| AGE | 86.0% | 80.7% / 92.1% | 518 | 0.0% | 0.0% / 0.0% | 518 | 0.0% | 0.0% / 0.0% | 518 |
+| DATE | 78.6% | 71.7% / 87.1% | 611 | 88.4% | 95.1% / 82.7% | 611 | 88.5% | 95.3% / 82.7% | 611 |
+| EMAIL | 98.6% | 98.0% / 99.2% | 249 | 95.4% | 99.1% / 92.0% | 249 | 95.0% | 99.1% / 91.2% | 249 |
+| FAMILY | 41.8% | 32.6% / 58.0% | 81 | 0.0% | 0.0% / 0.0% | 81 | 0.0% | 0.0% / 0.0% | 81 |
+| HOSPITAL | 43.0% | 34.4% / 57.4% | 136 | 0.0% | 0.0% / 0.0% | 136 | 0.0% | 0.0% / 0.0% | 136 |
+| ID | 29.1% | 25.4% / 34.1% | 754 | 0.0% | 0.0% / 0.0% | 754 | 0.0% | 0.0% / 0.0% | 754 |
+| LOCATION | 49.8% | 57.1% / 44.2% | 1732 | 38.6% | 32.2% / 48.3% | 1732 | 38.6% | 32.2% / 48.3% | 1732 |
+| NAME | 50.4% | 48.0% / 53.0% | 1003 | 46.4% | 41.1% / 53.4% | 1003 | 46.4% | 41.1% / 53.4% | 1003 |
+| ORGANIZATION | 2.2% | 4.5% / 1.5% | 67 | 0.0% | 0.0% / 0.0% | 67 | 3.4% | 1.8% / 32.8% | 67 |
+| OTHER | 0.0% | 0.0% / 0.0% | 7 | 0.0% | 0.0% / 0.0% | 7 | 0.0% | 0.0% / 0.0% | 7 |
+| PHONE | 16.2% | 8.9% / 97.0% | 33 | 0.0% | 0.0% / 0.0% | 33 | 21.7% | 12.3% / 90.9% | 33 |
+| PROFESSION | 48.0% | 37.5% / 66.7% | 9 | 0.0% | 0.0% / 0.0% | 9 | 0.0% | 0.0% / 0.0% | 9 |
+| SEX | 59.0% | 90.2% / 43.8% | 461 | 0.0% | 0.0% / 0.0% | 461 | 0.0% | 0.0% / 0.0% | 461 |
+| URL | — | — / — | — | 0.0% | 0.0% / 0.0% | 0 | 0.0% | 0.0% / 0.0% | 0 |
 
-_Classes where the Presidio baseline wins on strict F1: DATE._
+_Classes where the configured Presidio (ES) baseline wins on strict F1: DATE, ORGANIZATION, PHONE._
 
-_Person names are merged into `NAME` (any person name gets the same pseudonymisation treatment); see `eval/PROTOCOL.md`. Residual classes below 10% F1 in Pukara: `ORGANIZATION` has no dedicated regex rule and the CARMEN-trained BERT predicts few organizations (low support)._
+_Person names are merged into `NAME` (any person name gets the same pseudonymisation treatment); see `eval/PROTOCOL.md`._
+
+### Leakage wide attribution (which class causes the leak)
+
+| Attribution | Pukara | Presidio (OOTB) | Presidio (ES) |
+|---|---|---|---|
+| multiple | 0.4% (CI 0.0%–1.2%) | 32.4% (CI 26.8%–38.4%) | 24.4% (CI 19.2%–29.6%) |
+| solo_EMAIL | 0.4% (CI 0.0%–1.2%) | — | — |
+| solo_FAMILY | 4.0% (CI 1.6%–6.4%) | — | — |
+| solo_ID | 1.2% (CI 0.0%–2.8%) | 67.6% (CI 61.6%–73.2%) | 74.4% (CI 68.8%–79.6%) |
+| solo_NAME | 4.8% (CI 2.4%–7.6%) | — | 0.4% (CI 0.0%–1.2%) |
+| solo_PHONE | 0.4% (CI 0.0%–1.6%) | — | — |
+
+_`solo_<CLASS>` = documents whose wide leak is caused only by that class; `multiple` = documents leaking more than one class._
 
 ### Ablation on dev (not reportable; shows how the configuration was chosen)
 
 | Configuration | Word F1 | Relaxed F1 | Neutralization | Wide leakage |
 |---|---|---|---|---|
 | regex | 70.8% | 72.8% | 65.1% | 82.8% |
-| bert | 82.8% | 74.7% | 77.1% | 78.8% |
+| bert | 81.3% | 77.5% | 72.9% | 79.6% |
 | combined | 84.4% | 82.7% | 87.3% | 10.4% |
 | combined_presidio | 80.9% | 76.9% | 91.6% | 8.4% |
 
@@ -67,18 +80,17 @@ The frozen configuration is `combined` (BERT + regex, Presidio off): it maximize
 
 ## CARMEN-I (secondary, in-distribution upper bound)
 
-_Pukara: the BERT model is fine-tuned on CARMEN-I; in-distribution, possible train overlap, upper bound. The Presidio row is the standalone baseline with the same evaluator._
+_Pukara: the BERT model is fine-tuned on CARMEN-I; in-distribution, possible train overlap, upper bound. Presidio rows are the standalone baselines with the same evaluator._
 
-| Metric | Pukara | Presidio |
-|---|---|---|
-| Documents | 2000 | 2000 |
-| Word F1 | 84.3% | 26.3% |
-| Span strict F1 | 75.2% | 23.3% |
-| Span relaxed F1 | 86.4% | 26.9% |
-| PHI neutralization | 95.0% | 42.9% |
-| Leakage wide | 2.0% (CI 1.4%–2.6%) | 14.9% (CI 13.3%–16.4%) |
-| Leakage direct | 1.8% (CI 1.2%–2.5%) | 8.4% (CI 7.2%–9.7%) |
-_CARMEN-I contains many documents with no gold PHI; the per-document bootstrap CI of F1/neutralization is therefore dominated by empty documents and is omitted here (only leakage CI, a document-level mean, is shown). The full CI arrays are in the JSON files._
+| Metric | Pukara | Presidio (OOTB) | Presidio (ES) |
+|---|---|---|---|
+| Documents | 2000 | 2000 | 2000 |
+| Word F1 | 84.3% (CI 82.9%–85.6%) | 26.3% (CI 24.9%–27.6%) | 21.0% (CI 19.8%–22.1%) |
+| Span strict F1 | 75.2% | 23.3% | 17.2% |
+| Span relaxed F1 | 86.4% (CI 85.5%–87.2%) | 26.9% (CI 25.4%–28.1%) | 20.3% (CI 19.2%–21.4%) |
+| PHI neutralization | 95.0% (CI 93.9%–96.0%) | 42.9% (CI 40.9%–44.9%) | 45.0% (CI 43.0%–46.9%) |
+| Leakage wide | 2.0% (CI 1.4%–2.6%) | 14.9% (CI 13.3%–16.4%) | 14.3% (CI 12.8%–15.8%) |
+| Leakage direct | 1.8% (CI 1.2%–2.5%) | 8.4% (CI 7.2%–9.7%) | 7.6% (CI 6.6%–8.8%) |
 
 _The external `ramsestein/presidio_carmen` repository is cited only as a source evaluation (`es_core_news_md`, 1,000 docs, character Jaccard) and is **not** comparable row-by-row with this table._
 
@@ -86,11 +98,11 @@ _The external `ramsestein/presidio_carmen` repository is cited only as a source 
 
 Domain-agnostic metric: share of whitespace tokens that are **not** PHI in gold but fall inside a predicted span (lower is better).
 
-| Split | Pukara | Presidio |
-|---|---|---|
-| MEDDOCAN test | 1.8% (CI 1.8%–2.0%) | 2.9% (CI 3.0%–3.4%) |
+| Split | Pukara | Presidio (OOTB) | Presidio (ES) |
+|---|---|---|---|
+| MEDDOCAN test | 1.8% (CI 1.7%–1.9%) | 2.9% (CI 2.7%–3.0%) | 4.9% (CI 4.6%–5.1%) |
 
-Dev (diagnostic, not reportable): rate 1.7% (CI 1.7%–1.9%); per-component breakdown — `regex:NAME` 623 tokens (37.9%), `bert` 495 tokens (30.1%), `regex:ID` 241 tokens (14.7%), `regex:AGE` 169 tokens (10.3%), `regex:DATE` 27 tokens (1.6%), `bert+regex` 26 tokens (1.6%), `regex:OTHER` 16 tokens (1.0%), `regex:LOCATION` 15 tokens (0.9%), `regex:FAMILY` 12 tokens (0.7%), `regex:HOSPITAL` 9 tokens (0.5%), `regex:TIME` 9 tokens (0.5%).
+Dev (diagnostic, not reportable): rate 1.7% (CI 1.5%–1.8%); per-component breakdown — `regex:NAME` 623 tokens (37.9%), `bert` 495 tokens (30.1%), `regex:ID` 241 tokens (14.7%), `regex:AGE` 169 tokens (10.3%), `regex:DATE` 27 tokens (1.6%), `bert+regex` 26 tokens (1.6%), `regex:OTHER` 16 tokens (1.0%), `regex:LOCATION` 15 tokens (0.9%), `regex:FAMILY` 12 tokens (0.7%), `regex:HOSPITAL` 9 tokens (0.5%), `regex:TIME` 9 tokens (0.5%).
 
 ## Synthetic prompt benchmark
 
@@ -102,22 +114,46 @@ _Limitations: synthetic and templated (optimistic upper bound); possible circula
 
 ## Utility preservation (restoration robustness)
 
-- Round-trip exact (`deanonymize(anonymize(x)) == x`): 0 failures / 57 texts (100.0%). Literal placeholders in the input (`[NOMBRE_1]`, nested or malformed) are escaped on anonymize and unescaped after deanonymize, so round-trip is exact even for those adversarial texts.
-- Spurious restorations: 170/600 placeholder-free samples altered (28.3%, CI 24.5%–32.0%); 5.9% of characters altered.
+- Round-trip exact (`deanonymize(anonymize(x)) == x`): 0 failures / 57 texts (100.0%). Literal placeholders in the input are escaped on anonymize and unescaped after deanonymize, so round-trip is exact.
+
+### Robustness — restore mode `strict`
 
 | Perturbation | Restored | Rate |
 |---|---|---|
 | uppercase | 54/54 | 100.0% |
 | bold_markers | 54/54 | 100.0% |
-| lost_brackets | 31/54 | 57.4% |
-| single_bracket | 48/54 | 88.9% |
+| lost_brackets | 0/54 | 0.0% |
+| single_bracket | 0/54 | 0.0% |
 | space_inner | 54/54 | 100.0% |
 | label_translated | 54/54 | 100.0% |
 | plural_suffix | 54/54 | 100.0% |
 | genitive_suffix | 54/54 | 100.0% |
 | split_by_newline | 54/54 | 100.0% |
 
-_`lost_brackets` (57.4%): removing both brackets leaves no unambiguous anchor, so only placeholders whose tag+number is word-bounded are recovered; forcing the rest (glued to adjacent words, or bare `tag_n` inside other identifiers) would cause spurious restorations. `single_bracket` (88.9%): a lone bracket is ambiguous with prose, so only `[TAG_n` / `TAG_n]` forms at a word boundary are recovered; the rest are left untouched for the same reason._
+### Robustness — restore mode `lenient`
+
+| Perturbation | Restored | Rate |
+|---|---|---|
+| uppercase | 54/54 | 100.0% |
+| bold_markers | 54/54 | 100.0% |
+| lost_brackets | 9/54 | 16.7% |
+| single_bracket | 15/54 | 27.8% |
+| space_inner | 54/54 | 100.0% |
+| label_translated | 54/54 | 100.0% |
+| plural_suffix | 54/54 | 100.0% |
+| genitive_suffix | 54/54 | 100.0% |
+| split_by_newline | 54/54 | 100.0% |
+
+### Spurious restorations (placeholder-free texts altered by `deanonymize`)
+
+| Mode | Composition | Altered | Rate | Chars altered |
+|---|---|---|---|---|
+| strict | natural | 0/300 | 0.0% (CI 0.0%–0.0%) | 0.0% |
+| strict | adversarial | 0/300 | 0.0% (CI 0.0%–0.0%) | 0.0% |
+| lenient | natural | 0/300 | 0.0% (CI 0.0%–0.0%) | 0.0% |
+| lenient | adversarial | 300/300 | 100.0% (CI 100.0%–100.0%) | 31.8% |
+
+_`strict` (default) requires both brackets; `lenient` also recovers single/lost brackets at word boundaries, never over a token already present in the original prompt (see `docs/client.md`). `natural` = code/JSON/SQL/CSV without tag-like tokens; `adversarial` = samples with deliberately inserted tag-like tokens (`nombre_1`, `[ID_2`, `FECHA_3]`).
 
 ## Cost
 
