@@ -107,13 +107,16 @@ src/presidio.py` is empty except the escape/restoration part of
 | `over_redaction_dev.json` | `eval.over_redaction --split dev --mode combined --breakdown` | `be0e1d0` |
 | `utility.json` | `eval.utility --mode combined` | `c37c16f` |
 
-`meddocan.json` (Pukara test) was **not** re-run; it now carries
-`"dirty": false` added from the tree state at `b69ddd6` (clean, verified by
-commit). The other pre-existing JSONs (`carmen_pukara.json`, `ablate_dev_*`,
-`diagnosis.json`, `promptbench*.json`, `cost.json`) also received
-`"dirty": false` manually: they were produced on clean trees and the detector is
-unchanged since `eval-frozen-v2`, so they were not regenerated (no redundant
-compute).
+`meddocan.json` (Pukara test) was **not** re-run in the third pass: at that
+point it carried `"dirty": false` added from the tree state at `b69ddd6` (clean,
+verified by commit). In the fourth pass it **was** re-run once with the frozen
+detector to capture per-document TP/FP/FN and recalculate the CIs with the
+ratio estimator; all point values stayed identical to `b69ddd6` (see "Fourth
+pass"). The other pre-existing JSONs (`carmen_pukara.json`, `ablate_dev_*`,
+`diagnosis.json`, `promptbench*.json`, `cost.json`) received `"dirty": false`
+manually in the third pass; `carmen_pukara.json` and `ablate_dev_*` were
+regenerated in the fourth pass with the frozen detector (the ablations had been
+produced at `b468f31`, pre-freeze).
 
 ### Rule 2: test predictions were not saved
 
