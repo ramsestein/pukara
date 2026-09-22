@@ -1,8 +1,8 @@
 {
   "script": "eval/utility.py",
-  "generated": "2026-09-22T04:33:54.812903Z",
-  "code_revision": "757b7f786060f5d8ab229dbb3148240a833d4a95",
-  "dirty": false,
+  "generated": "2026-09-22T05:31:12.715585Z",
+  "code_revision": "345ef3ab218be70bbac0f037dfe57d239f4dfc9a",
+  "dirty": true,
   "roundtrip": {
     "texts": 57,
     "failures": 0,
@@ -10,199 +10,91 @@
     "examples": []
   },
   "robustness": {
-    "strict": {
-      "uppercase": {
-        "restored": 54,
-        "total": 54,
-        "rate": 1.0
-      },
-      "bold_markers": {
-        "restored": 54,
-        "total": 54,
-        "rate": 1.0
-      },
-      "lost_brackets": {
-        "restored": 0,
-        "total": 54,
-        "rate": 0.0
-      },
-      "single_bracket": {
-        "restored": 0,
-        "total": 54,
-        "rate": 0.0
-      },
-      "space_inner": {
-        "restored": 54,
-        "total": 54,
-        "rate": 1.0
-      },
-      "label_translated": {
-        "restored": 54,
-        "total": 54,
-        "rate": 1.0
-      },
-      "plural_suffix": {
-        "restored": 54,
-        "total": 54,
-        "rate": 1.0
-      },
-      "genitive_suffix": {
-        "restored": 54,
-        "total": 54,
-        "rate": 1.0
-      },
-      "split_by_newline": {
-        "restored": 54,
-        "total": 54,
-        "rate": 1.0
-      }
+    "uppercase": {
+      "restored": 54,
+      "total": 54,
+      "rate": 1.0
     },
-    "lenient": {
-      "uppercase": {
-        "restored": 54,
-        "total": 54,
-        "rate": 1.0
-      },
-      "bold_markers": {
-        "restored": 54,
-        "total": 54,
-        "rate": 1.0
-      },
-      "lost_brackets": {
-        "restored": 9,
-        "total": 54,
-        "rate": 0.1667
-      },
-      "single_bracket": {
-        "restored": 15,
-        "total": 54,
-        "rate": 0.2778
-      },
-      "space_inner": {
-        "restored": 54,
-        "total": 54,
-        "rate": 1.0
-      },
-      "label_translated": {
-        "restored": 54,
-        "total": 54,
-        "rate": 1.0
-      },
-      "plural_suffix": {
-        "restored": 54,
-        "total": 54,
-        "rate": 1.0
-      },
-      "genitive_suffix": {
-        "restored": 54,
-        "total": 54,
-        "rate": 1.0
-      },
-      "split_by_newline": {
-        "restored": 54,
-        "total": 54,
-        "rate": 1.0
-      }
+    "bold_markers": {
+      "restored": 54,
+      "total": 54,
+      "rate": 1.0
+    },
+    "lost_brackets": {
+      "restored": 0,
+      "total": 54,
+      "rate": 0.0
+    },
+    "single_bracket": {
+      "restored": 0,
+      "total": 54,
+      "rate": 0.0
+    },
+    "space_inner": {
+      "restored": 54,
+      "total": 54,
+      "rate": 1.0
+    },
+    "label_translated": {
+      "restored": 54,
+      "total": 54,
+      "rate": 1.0
+    },
+    "plural_suffix": {
+      "restored": 54,
+      "total": 54,
+      "rate": 1.0
+    },
+    "genitive_suffix": {
+      "restored": 54,
+      "total": 54,
+      "rate": 1.0
+    },
+    "split_by_newline": {
+      "restored": 54,
+      "total": 54,
+      "rate": 1.0
     }
   },
   "spurious_restorations": {
-    "strict": {
-      "natural": {
-        "samples": 300,
-        "altered": 0,
-        "rate": 0.0,
-        "rate_ci95": [
-          0.0,
-          0.0
-        ],
-        "altered_chars": 0,
-        "total_chars": 29996,
-        "char_rate": 0.0,
-        "char_rate_ci95": [
-          0.0,
-          0.0
-        ],
-        "examples": []
-      },
-      "adversarial": {
-        "samples": 300,
-        "altered": 0,
-        "rate": 0.0,
-        "rate_ci95": [
-          0.0,
-          0.0
-        ],
-        "altered_chars": 0,
-        "total_chars": 12370,
-        "char_rate": 0.0,
-        "char_rate_ci95": [
-          0.0,
-          0.0
-        ],
-        "examples": []
-      }
+    "natural": {
+      "samples": 300,
+      "altered": 0,
+      "rate": 0.0,
+      "rate_ci95": [
+        0.0,
+        0.0
+      ],
+      "altered_chars": 0,
+      "total_chars": 29996,
+      "char_rate": 0.0,
+      "char_rate_ci95": [
+        0.0,
+        0.0
+      ],
+      "examples": []
     },
-    "lenient": {
-      "natural": {
-        "samples": 300,
-        "altered": 0,
-        "rate": 0.0,
-        "rate_ci95": [
-          0.0,
-          0.0
-        ],
-        "altered_chars": 0,
-        "total_chars": 29996,
-        "char_rate": 0.0,
-        "char_rate_ci95": [
-          0.0,
-          0.0
-        ],
-        "examples": []
-      },
-      "adversarial": {
-        "samples": 300,
-        "altered": 300,
-        "rate": 1.0,
-        "rate_ci95": [
-          1.0,
-          1.0
-        ],
-        "altered_chars": 3930,
-        "total_chars": 12370,
-        "char_rate": 0.3177,
-        "char_rate_ci95": [
-          0.3096,
-          0.3257
-        ],
-        "examples": [
-          {
-            "sample": "SELECT nombre_1, clave_2 FROM tabla WHERE id = 754;",
-            "restored": "SELECT <valor:NOMBRE:1>, clave_2 FROM tabla WHERE id = 754;"
-          },
-          {
-            "sample": "{\"fecha_2\": 214, \"clave_1\": [214, 215]}",
-            "restored": "{\"<valor:FECHA:2>\": 214, \"clave_1\": [214, 215]}"
-          },
-          {
-            "sample": "corchete abierto: [HORA_1 y campo_2.",
-            "restored": "corchete abierto: <valor:HORA:1> y campo_2."
-          },
-          {
-            "sample": "corchete cerrado: telefono_2] y campo_1.",
-            "restored": "corchete cerrado: <valor:TELEFONO:2> y campo_1."
-          },
-          {
-            "sample": "SELECT correo_1, var_2 FROM tabla WHERE id = 381;",
-            "restored": "SELECT <valor:CORREO:1>, var_2 FROM tabla WHERE id = 381;"
-          }
-        ]
-      }
+    "adversarial": {
+      "samples": 300,
+      "altered": 0,
+      "rate": 0.0,
+      "rate_ci95": [
+        0.0,
+        0.0
+      ],
+      "altered_chars": 0,
+      "total_chars": 12370,
+      "char_rate": 0.0,
+      "char_rate_ci95": [
+        0.0,
+        0.0
+      ],
+      "examples": []
     }
   },
   "notes": [
-    "Round-trip failures are bugs, not metrics; round-trip is exact in strict mode (default).",
-    "Perturbations mimic deterministic LLM edits to placeholders; the rate is the share of texts where ALL original entities are recovered, per restoration mode (strict/lenient).",
-    "spurious_restorations: share of placeholder-free texts altered by deanonymize, per mode (strict/lenient) and sample composition (natural code/JSON/SQL/CSV vs adversarial tag-like tokens), plus share of altered characters."
+    "Round-trip failures are bugs, not metrics; round-trip is exact in strict mode (the only mode).",
+    "Perturbations mimic deterministic LLM edits to placeholders; the rate is the share of texts where ALL original entities are recovered.",
+    "spurious_restorations: share of placeholder-free texts altered by deanonymize, by sample composition (natural code/JSON/SQL/CSV vs adversarial tag-like tokens), plus share of altered characters."
   ]
 }

@@ -46,22 +46,18 @@ It listens on `http://127.0.0.1:11434` and forwards (anonymized + encrypted) to
 the remote proxy, so any Ollama-compatible tool can use the remote model as if
 it were local.
 
-## Restoration mode
+## Restoration
 
-When the model edits a placeholder in its answer, Pukara restores it with the
-policy selected by `PUKARA_RESTORE_MODE`:
+When the model edits a placeholder in its answer, Pukara restores it with a
+single policy (`strict`): both brackets are required (`[NOMBRE_1]`). It
+tolerates case, `**…**`, inner spaces, translated labels, `s`/`'s` suffixes and
+inner newlines, and never restores a token already present in the original
+prompt.
 
-| Mode | Default | Behaviour |
-|---|---|---|
-| `strict` | **yes** | Restores only placeholders with **both brackets** (`[NOMBRE_1]`). Tolerates case, `**…**`, inner spaces, translated labels, `s`/`'s` suffixes and inner newlines. Never restores a token already present in the original prompt. |
-| `lenient` | no | Also recovers `single_bracket` and `lost_brackets`, only at word boundaries and never over a token already present in the original prompt. |
-
-Choose `strict` (default) for VS Code/Codex-style use where code, JSON and SQL
-may contain `nombre_1`-like tokens: `strict` alters 0 % of placeholder-free
-text, while `lenient` alters tag-like text (adversarial samples: 100 % of texts,
-31.8 % of characters). Use `lenient` only for natural-language chat where the
-model tends to drop brackets. Full figures in `eval/results/utility.json` and
-`docs/metrics.md`.
+`strict` alters 0 % of placeholder-free text, even on adversarial tag-like
+tokens (`nombre_1`, `[ID_2`, `FECHA_3]`). `single_bracket` / `lost_brackets`
+edits are **not** recovered and are reported as honest restoration failures.
+Full figures in `eval/results/utility.json` and `docs/metrics.md`.
 
 ## Streaming (limitation)
 

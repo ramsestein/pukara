@@ -142,11 +142,10 @@ upper bound (the model was fine-tuned on it).
   (CI 1.8–2.0 %), mostly BERT fragments and `name` rules firing on title-case
   clinical headers — see `docs/dev/eval-diagnosis.md`.
 - **Restoration policy.** Round-trip is exact (57/57). Restoration of an
-  LLM-edited placeholder defaults to `strict` (both brackets required); the
-  optional `lenient` mode also recovers single/lost brackets but alters
-  placeholder-free text with tag-like tokens (adversarial samples: 0 % strict
-  vs 100 % lenient; 31.8 % of characters). See `docs/client.md` for how to
-  choose.
+  LLM-edited placeholder requires both brackets (`strict`); single/lost
+  brackets are not recovered and are reported as honest failures.
+  Placeholder-free text is never altered (0 %, even on adversarial tag-like
+  tokens). See `docs/client.md`.
 - **Domain-concept retention is not measured by design.** Pukara is not
   clinical-domain-specific, so a clinical-concept retention metric would bias
   the evaluation to that domain; the domain-agnostic over-redaction metric is

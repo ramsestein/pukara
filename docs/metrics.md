@@ -132,30 +132,14 @@ _Limitations: synthetic and templated (optimistic upper bound); possible circula
 | genitive_suffix | 54/54 | 100.0% |
 | split_by_newline | 54/54 | 100.0% |
 
-### Robustness — restore mode `lenient`
-
-| Perturbation | Restored | Rate |
-|---|---|---|
-| uppercase | 54/54 | 100.0% |
-| bold_markers | 54/54 | 100.0% |
-| lost_brackets | 9/54 | 16.7% |
-| single_bracket | 15/54 | 27.8% |
-| space_inner | 54/54 | 100.0% |
-| label_translated | 54/54 | 100.0% |
-| plural_suffix | 54/54 | 100.0% |
-| genitive_suffix | 54/54 | 100.0% |
-| split_by_newline | 54/54 | 100.0% |
-
 ### Spurious restorations (placeholder-free texts altered by `deanonymize`)
 
-| Mode | Composition | Altered | Rate | Chars altered |
-|---|---|---|---|---|
-| strict | natural | 0/300 | 0.0% (CI 0.0%–0.0%) | 0.0% |
-| strict | adversarial | 0/300 | 0.0% (CI 0.0%–0.0%) | 0.0% |
-| lenient | natural | 0/300 | 0.0% (CI 0.0%–0.0%) | 0.0% |
-| lenient | adversarial | 300/300 | 100.0% (CI 100.0%–100.0%) | 31.8% |
+| Composition | Altered | Rate | Chars altered |
+|---|---|---|---|
+| natural | 0/300 | 0.0% (CI 0.0%–0.0%) | 0.0% |
+| adversarial | 0/300 | 0.0% (CI 0.0%–0.0%) | 0.0% |
 
-_`strict` (default) requires both brackets; `lenient` also recovers single/lost brackets at word boundaries, never over a token already present in the original prompt (see `docs/client.md`). `natural` = code/JSON/SQL/CSV without tag-like tokens; `adversarial` = samples with deliberately inserted tag-like tokens (`nombre_1`, `[ID_2`, `FECHA_3]`).
+_Restoration is `strict` only (both brackets required). `natural` = code/JSON/SQL/CSV without tag-like tokens; `adversarial` = samples with deliberately inserted tag-like tokens (`nombre_1`, `[ID_2`, `FECHA_3]`). See `docs/client.md`._
 
 ## Cost
 

@@ -324,39 +324,36 @@ def main() -> int:
             "unescaped after deanonymize, so round-trip is exact.",
             "",
         ]
-        for mode in ("strict", "lenient"):
-            rob = utility["robustness"][mode]
-            lines += [
-                f"### Robustness — restore mode `{mode}`",
-                "",
-                "| Perturbation | Restored | Rate |",
-                "|---|---|---|",
-            ]
-            for name, r in rob.items():
-                lines.append(
-                    f"| {name} | {r['restored']}/{r['total']} | {_pct(r['rate'])} |")
-            lines.append("")
+        rob = utility["robustness"]
+        lines += [
+            "### Robustness — restore mode `strict`",
+            "",
+            "| Perturbation | Restored | Rate |",
+            "|---|---|---|",
+        ]
+        for name, r in rob.items():
+            lines.append(
+                f"| {name} | {r['restored']}/{r['total']} | {_pct(r['rate'])} |")
+        lines.append("")
 
         lines += [
             "### Spurious restorations (placeholder-free texts altered by `deanonymize`)",
             "",
-            "| Mode | Composition | Altered | Rate | Chars altered |",
-            "|---|---|---|---|---|",
+            "| Composition | Altered | Rate | Chars altered |",
+            "|---|---|---|---|",
         ]
-        for mode in ("strict", "lenient"):
-            for comp in ("natural", "adversarial"):
-                s = utility["spurious_restorations"][mode][comp]
-                lines.append(
-                    f"| {mode} | {comp} | {s['altered']}/{s['samples']} | "
-                    f"{_rate(s)} | {_pct(s['char_rate'])} |"
-                )
+        for comp in ("natural", "adversarial"):
+            s = utility["spurious_restorations"][comp]
+            lines.append(
+                f"| {comp} | {s['altered']}/{s['samples']} | "
+                f"{_rate(s)} | {_pct(s['char_rate'])} |"
+            )
         lines += [
             "",
-            "_`strict` (default) requires both brackets; `lenient` also recovers "
-            "single/lost brackets at word boundaries, never over a token already "
-            "present in the original prompt (see `docs/client.md`). `natural` = "
+            "_Restoration is `strict` only (both brackets required). `natural` = "
             "code/JSON/SQL/CSV without tag-like tokens; `adversarial` = samples with "
-            "deliberately inserted tag-like tokens (`nombre_1`, `[ID_2`, `FECHA_3]`).",
+            "deliberately inserted tag-like tokens (`nombre_1`, `[ID_2`, `FECHA_3]`). "
+            "See `docs/client.md`._",
             "",
         ]
     else:

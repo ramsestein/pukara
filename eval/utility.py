@@ -153,11 +153,11 @@ def generate_adversarial_samples(seed: int = 42, n: int = 300) -> list:
             samples.append(
                 f'{{"{tag}_{num}": {r}, "{neu}_{num2}": [{r}, {r + 1}]}}'
             )
-        elif kind == 2:  # corchete abierto (single_bracket, solo lenient)
+        elif kind == 2:  # corchete abierto (single_bracket; strict no lo altera)
             samples.append(
                 f"corchete abierto: [{tag.upper()}_{num} y {neu}_{num2}."
             )
-        else:  # corchete cerrado (single_bracket, solo lenient)
+        else:  # corchete cerrado (single_bracket; strict no lo altera)
             samples.append(
                 f"corchete cerrado: {tag}_{num}] y {neu}_{num2}."
             )
@@ -222,15 +222,14 @@ def roundtrip(texts, predictor):
     return failures
 
 
-def robustness(texts, predictor, mode: str):
+def robustness(texts, predictor):
     """% de textos donde TODAS las entidades originales se recuperan tras la
-    perturbación, para un modo de restauración (`strict` o `lenient`).
+    perturbación (modo de restauración `strict`, el único).
 
     Se anonimiza una sola vez por texto (la anonimización es determinista e
     independiente de la perturbación); después se aplican todas las
     perturbaciones sobre el mismo texto anonimizado.
     """
-    predictor._anon.restore_mode = mode  # noqa: SLF001
     results = {name: {"restored": 0, "total": 0} for name in PERTURBATIONS}
     for text in texts:
         anonymized, text_to_ph = predictor.anonymize(text)
@@ -246,8 +245,8 @@ def robustness(texts, predictor, mode: str):
     return results
 
 
-def spurious_restorations(predictor, seed=42, natural_n=300, adversarial_n=300):
-    """Tasa de restauraciones espurias por modo (`strict`/`lenient`) y por
+def spurious_restorations(seed=42, natural_n=300, adversarial_n=300):
+    """Tasa de restauraciones espurias del modo `strict` (el único) por
     composición de la muestra (natural / adversarial).
 
     Construye un mapa sintético con todos los placeholders `[TAG_1..2]` y
@@ -257,27 +256,20 @@ def spurious_restorations(predictor, seed=42, natural_n=300, adversarial_n=300):
     """
     from src import anonymizer as _an
 
-    def _make_anon(mode):
-        anon = _an.Anonymizer.__new__(_an.Anonymizer)
-        anon.reset()
-        anon.restore_mode = mode
-        anon.original_tokens = set()
-        for tag in _an.TAGS.values():
-            for n_ in (1, 2):
-                anon.ph_to_text[f"[{tag}_{n_}]"] = f"<valor:{tag}:{n_}>"
-        return anon
+    anon = _an.Anonymizer.__new__(_an.Anonymizer)
+    anon.reset()
+    anon.original_tokens = set()
+    for tag in _an.TAGS.values():
+        for n_ in (1, 2):
+            anon.ph_to_text[f"[{tag}_{n_}]"] = f"<valor:{tag}:{n_}>"
 
     natural = generate_natural_samples(seed, natural_n)
     adversarial = generate_adversarial_samples(seed, adversarial_n)
 
-    out = {}
-    for mode in ("strict", "lenient"):
-        anon = _make_anon(mode)
-        out[mode] = {
-            "natural": _measure_spurious(anon, natural),
-            "adversarial": _measure_spurious(anon, adversarial),
-        }
-    return out
+    return {
+        "natural": _measure_spurious(anon, natural),
+        "adversarial": _measure_spurious(anon, adversarial),
+    }
 
 
 def main() -> int:
@@ -305,11 +297,8 @@ def main() -> int:
 
     predictor = common.Predictor(args.mode, args.model_dir)
     failures = roundtrip(texts, predictor)
-    rob = {
-        "strict": robustness(texts, predictor, "strict"),
-        "lenient": robustness(texts, predictor, "lenient"),
-    }
-    spurious = spurious_restorations(predictor, seed=args.spurious_seed,
+    rob = robustness(texts, predictor)
+    spurious = spurious_restorations(seed=args.spurious_seed,
                                      natural_n=args.spurious_n,
                                      adversarial_n=args.spurious_n)
 
@@ -328,14 +317,12 @@ def main() -> int:
         "spurious_restorations": spurious,
         "notes": [
             "Round-trip failures are bugs, not metrics; round-trip is exact in "
-            "strict mode (default).",
+            "strict mode (the only mode).",
             "Perturbations mimic deterministic LLM edits to placeholders; the "
-            "rate is the share of texts where ALL original entities are recovered, "
-            "per restoration mode (strict/lenient).",
+            "rate is the share of texts where ALL original entities are recovered.",
             "spurious_restorations: share of placeholder-free texts altered by "
-            "deanonymize, per mode (strict/lenient) and sample composition "
-            "(natural code/JSON/SQL/CSV vs adversarial tag-like tokens), plus share "
-            "of altered characters.",
+            "deanonymize, by sample composition (natural code/JSON/SQL/CSV vs "
+            "adversarial tag-like tokens), plus share of altered characters.",
         ],
     }
 
@@ -345,7 +332,7 @@ def main() -> int:
                    encoding="utf-8")
     print(
         f"[utility] roundtrip failures={len(failures)}, "
-        f"robustness(strict)={ {k: v['rate'] for k, v in rob['strict'].items()} }"
+        f"robustness(strict)={ {k: v['rate'] for k, v in rob.items()} }"
     )
     return 0
 

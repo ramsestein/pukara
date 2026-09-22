@@ -175,17 +175,14 @@ def _ph_num(ph: str) -> int:
 
 
 def _restore_placeholder(text: str, ph: str, orig: str,
-                         restore_mode: str = "strict",
                          original_tokens=None) -> str:
     """Restaura un placeholder y sus perturbaciones toleradas.
 
-    - `strict` (por defecto): exige ambos corchetes `[TAG_n]`. Tolera
-      mayúsculas/minúsculas, `**…**`, espacios internos, etiqueta traducida al
-      inglés, sufijos `s`/`'s` y salto de línea interno. No recupera
-      `single_bracket` ni `lost_brackets`.
-    - `lenient`: además `single_bracket` y `lost_brackets`, con dos
-      salvaguardas: solo en límite de palabra y **nunca** sobre un token que ya
-      aparecía en el prompt original (`original_tokens`, en minúscula).
+    Exige ambos corchetes `[TAG_n]`. Tolera mayúsculas/minúsculas, `**…**`,
+    espacios internos, etiqueta traducida al inglés, sufijos `s`/`'s` y salto
+    de línea interno. No recupera `single_bracket` ni `lost_brackets`. Nunca
+    restaura un token que ya aparecía en el prompt original
+    (`original_tokens`, en minúscula).
 
     Insensible a mayúsculas. El número no puede ir seguido de otro dígito
     (evita que [NOMBRE_1] se cuele dentro de [NOMBRE_10]).
@@ -195,19 +192,7 @@ def _restore_placeholder(text: str, ph: str, orig: str,
     tag_alt = "(?:" + "|".join(re.escape(a) for a in aliases) + ")"
     core = tag_alt + r"[\s_]*" + re.escape(num) + r"(?!\d)"
     bracket_alt = r"\[\s*" + core + r"\s*\](?-i:'s|s)?"
-    if restore_mode == "strict":
-        pat = re.compile(r"\*{0,2}(?:" + bracket_alt + r")\*{0,2}", re.IGNORECASE)
-    else:
-        pat = re.compile(
-            r"\*{0,2}(?:"
-            + bracket_alt
-            + r"|"
-            + r"\[\s*" + core + r"(?!\w)"                  # [TAG_n  (solo apertura)
-            + r"|"
-            + r"(?<![A-Za-z0-9])" + core + r"(?:\s*\]|(?!\w))"  # TAG_n o TAG_n] (sin apertura)
-            + r")\*{0,2}",
-            re.IGNORECASE,
-        )
+    pat = re.compile(r"\*{0,2}(?:" + bracket_alt + r")\*{0,2}", re.IGNORECASE)
 
     if not original_tokens:
         return pat.sub(orig, text)
@@ -563,10 +548,6 @@ class Anonymizer:
             use_presidio = raw in ("1", "true", "yes", "on")
         self.use_presidio = use_presidio
 
-        # Política de restauración: `strict` (por defecto) o `lenient`.
-        raw_mode = _read_env("PUKARA_RESTORE_MODE", "strict").strip().lower()
-        self.restore_mode = raw_mode if raw_mode in ("strict", "lenient") else "strict"
-
         model_path = self.model_dir / model_dirname()
         if not model_path.exists():
             raise FileNotFoundError(f"Modelo no encontrado: {model_path}")
@@ -913,11 +894,9 @@ class Anonymizer:
         # Placeholders con número mayor primero, para no romper [NOMBRE_10]
         # al restaurar [NOMBRE_1] (además la regex exige que el número no vaya
         # seguido de más alfanuméricos).
-        restore_mode = getattr(self, "restore_mode", "strict")
         original_tokens = getattr(self, "original_tokens", set())
         for ph, orig in sorted(self.ph_to_text.items(), key=lambda kv: _ph_num(kv[0]), reverse=True):
-            text = _restore_placeholder(text, ph, orig, restore_mode=restore_mode,
-                                        original_tokens=original_tokens)
+            text = _restore_placeholder(text, ph, orig, original_tokens=original_tokens)
         escapes = getattr(self, "escapes", {})
         if escapes:
             text = _unescape_literal_placeholders(text, escapes)

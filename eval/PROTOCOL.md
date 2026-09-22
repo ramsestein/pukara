@@ -114,12 +114,11 @@ concepto. IC bootstrap, semilla fija.
 
 - **Round-trip exacto:** `deanonymize(anonymize(x)) == x` byte a byte. Fallo =
   bug, no métrica.
-- **Robustez:** % de restauraciones correctas por tipo de perturbación, por modo
-  de restauración (`strict` por defecto, `lenient`; ver §3.7 de la cuarta
-  pasada).
+- **Robustez:** % de restauraciones correctas por tipo de perturbación (modo de
+  restauración único: `strict`; ver §3.7 de la cuarta pasada).
 - **Restauraciones espurias:** falsos positivos de la regex de restauración
   sobre texto que contiene corchetes/guiones bajos legítimos (p. ej. JSON,
-  código), por modo y composición de la muestra.
+  código), por composición de la muestra.
 
 ### 3.7 Estimadores de IC (cuarta pasada)
 
