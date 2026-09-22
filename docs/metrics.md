@@ -54,6 +54,8 @@ _Classes where the configured Presidio (ES) baseline wins on strict F1: DATE, OR
 
 _Person names are merged into `NAME` (any person name gets the same pseudonymisation treatment); see `eval/PROTOCOL.md`._
 
+_Why Presidio (ES) `ID` is 0 %: MEDDOCAN `test` contains no DNI/NIE-shaped identifiers. Of the 754 gold `ID` spans, 741 are numeric-only (history numbers, social-security numbers, plain numbers) and 13 are non-numeric annotation artifacts; none has the 8-digit + control-letter shape that `EsNifRecognizer`/`EsNieRecognizer` require. The NIF recognizer would also validate the control letter, but no span even reaches that check — the zero recall is a format mismatch, not a checksum rejection._
+
 ### Leakage wide attribution (which class causes the leak)
 
 | Attribution | Pukara | Presidio (OOTB) | Presidio (ES) |
