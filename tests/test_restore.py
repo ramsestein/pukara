@@ -143,12 +143,14 @@ def test_strict_no_alterar_texto_sin_corchetes(base):
 @settings(max_examples=200)
 @given(st.text(
     alphabet=st.characters(whitelist_categories=("Ll", "Lu", "Nd"),
-                           whitelist_characters=" []_*"),
+                           whitelist_characters=" _"),
     max_size=60,
 ))
 def test_no_restaurar_token_del_original(base):
-    """Propiedad: en ambos modos, un token presente en el prompt original
-    nunca se restaura (salvaguarda del original)."""
+    """Propiedad: en ambos modos, un token tipo etiqueta presente en el prompt
+    original nunca se restaura (salvaguarda del original). Se usan formas sin
+    corchetes (`nombre_1`); las formas con corchetes literales las cubre el
+    escape del round-trip."""
     for mode in ("strict", "lenient"):
         anon = _make_anon(mode)
         anon.ph_to_text = {"[NOMBRE_1]": "María", "[FECHA_2]": "12/05/2024",

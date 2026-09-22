@@ -213,7 +213,6 @@ def _restore_placeholder(text: str, ph: str, orig: str,
         return pat.sub(orig, text)
 
     token_spans = [(m.start(), m.end()) for m in re.finditer(r"\S+", text)]
-    token_texts = [text[s:e].lower() for s, e in token_spans]
     ph_lower = ph.lower()
 
     def _repl(m: re.Match) -> str:
@@ -221,11 +220,15 @@ def _restore_placeholder(text: str, ph: str, orig: str,
         # placeholder generado: se restaura siempre.
         if m.group(0).strip("*").lower() == ph_lower:
             return orig
+        # La salvaguarda del original solo aplica a coincidencias de un único
+        # token (un placeholder perturbado con espacios es multi-token y debe
+        # restaurarse).
         s, e = m.start(), m.end()
-        for (ts, te), tt in zip(token_spans, token_texts):
-            if ts < e and s < te:
-                if tt in original_tokens:
-                    return m.group(0)
+        overlapping = [(ts, te) for ts, te in token_spans if ts < e and s < te]
+        if len(overlapping) == 1:
+            ts, te = overlapping[0]
+            if text[ts:te].lower() in original_tokens:
+                return m.group(0)
         return orig
 
     return pat.sub(_repl, text)
