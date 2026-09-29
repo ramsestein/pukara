@@ -162,6 +162,9 @@ upper bound (the model was fine-tuned on it).
   forces `stream=false`.
 - **A compromised client is out of scope** (it holds the original text, the map
   and the key).
+- **Text-only request support.** The local endpoint rejects images, audio,
+  tool calls and unrecognised string fields rather than forwarding content it
+  cannot pseudonymise. Inference is blocked when the client model is unavailable.
 
 ## Tests
 
@@ -182,4 +185,3 @@ If you use Pukara, please cite it using [`CITATION.cff`](CITATION.cff).
 ## License
 
 MIT. See [`LICENSE`](LICENSE).
-

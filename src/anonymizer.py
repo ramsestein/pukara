@@ -903,19 +903,21 @@ class Anonymizer:
         return text
 
 
-# Lazy singleton: loaded once; optional (None if unavailable).
+# Lazy singleton: a loading failure blocks requests until the process restarts.
 _ANONYMIZER = None
-_ANONYMIZER_FAILED = False
+_ANONYMIZER_ERROR = None
 
 
 def get_anonymizer():
-    global _ANONYMIZER, _ANONYMIZER_FAILED
-    if _ANONYMIZER is None and not _ANONYMIZER_FAILED:
+    global _ANONYMIZER, _ANONYMIZER_ERROR
+    if _ANONYMIZER_ERROR is not None:
+        raise RuntimeError("anonymizer unavailable") from _ANONYMIZER_ERROR
+    if _ANONYMIZER is None:
         try:
             _ANONYMIZER = Anonymizer()
         except Exception as exc:  # noqa: BLE001
-            _ANONYMIZER_FAILED = True
-            print(f"[anonymizer] unavailable, sending without anonymization: {exc}")
+            _ANONYMIZER_ERROR = exc
+            raise RuntimeError("anonymizer unavailable") from exc
     return _ANONYMIZER
 
 

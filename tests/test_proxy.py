@@ -137,6 +137,27 @@ def test_main_strict_blocks_insecure(monkeypatch):
         proxy.main()
 
 
+@pytest.mark.parametrize("user,password", [("admin", ""), ("", "secret")])
+def test_main_strict_requires_both_credentials(monkeypatch, user, password):
+    monkeypatch.setattr(proxy, "SECRET", SECRET_B64)
+    monkeypatch.setattr(proxy, "ALLOWED_IPS", "1.2.3.4")
+    monkeypatch.setattr(proxy, "_ALLOWED_NETS", proxy._parse_allowed_ips("1.2.3.4"))
+    monkeypatch.setattr(proxy, "AUTH_USER", user)
+    monkeypatch.setattr(proxy, "AUTH_PASSWORD", password)
+    monkeypatch.setattr(proxy, "OLLAMA_MODEL", "m")
+    monkeypatch.setattr(proxy, "BERT_MODEL", "b")
+    monkeypatch.setattr(proxy, "RATE_LIMIT", 60)
+    monkeypatch.setattr(proxy, "STRICT", True)
+    with pytest.raises(SystemExit):
+        proxy.main()
+
+
+def test_invalid_allowed_ips_never_opens_access(monkeypatch):
+    monkeypatch.setattr(proxy, "ALLOWED_IPS", "invalid")
+    monkeypatch.setattr(proxy, "_ALLOWED_NETS", [])
+    assert proxy._ip_allowed("1.2.3.4") is False
+
+
 def test_main_starts_server(monkeypatch):
     monkeypatch.setattr(proxy, "SECRET", SECRET_B64)
     monkeypatch.setattr(proxy, "ALLOWED_IPS", "1.2.3.4")

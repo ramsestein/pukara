@@ -87,6 +87,7 @@ Abbreviations: `test_secure.py` (S), `test_proxy.py` (P), `test_anonymizer.py`
 |---|---|---|---|
 | Spoofing (foreign web page) | Reject non-local `Origin` (CORS) | `L::test_foreign_origin` | DNS rebinding against `localhost` hostnames |
 | Tampering (model management) | Deny management routes | `L::test_is_management_path` | Local processes are trusted |
+| Information disclosure (model unavailable or unsupported payload) | Block inference before forwarding; text-only chat, generate and embeddings | `test_privacy.py` | Detector recall remains below 1 |
 | Information disclosure (streaming) | Force `stream=false`, single chunk | `L::test_*_anonymized` | Documented limitation (see `docs/client.md`) |
 | Repudiation | None | — | Local endpoint has no audit trail |
 
@@ -109,7 +110,7 @@ Abbreviations: `test_secure.py` (S), `test_proxy.py` (P), `test_anonymizer.py`
 
 | Threat | Mitigation | Test | Residual risk |
 |---|---|---|---|
-| Spoofing (wrong IP) | `ALLOWED_IPS` allowlist | `P::test_ip_allowed` | Fail-open if unset (see `STRICT=1`) |
+| Spoofing (wrong IP) | `ALLOWED_IPS` allowlist and strict startup by default | `P::test_ip_allowed`, `P::test_invalid_allowed_ips_never_opens_access` | Empty allowlist only permits unrestricted access if `STRICT=0` is explicitly set |
 | Spoofing (XFF) | Trust `X-Forwarded-For` only from `TRUSTED_PROXIES` | `P::test_resolve_client_ip_*` | Misconfigured proxy list |
 | Tampering (SSRF) | Path validation + `urllib.parse` URL building | `P::test_validate_path`, `P::test_upstream_url_rejects_host_trick` | — |
 | Information disclosure (oracle) | Single generic denial for tag/freshness/replay/credentials | `P::test_generic_denial_is_stable` | IP/rate-limit errors still distinct (pre-auth) |
