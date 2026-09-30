@@ -2,8 +2,9 @@
   "title": "Pukara",
   "description": "A privacy-first, self-hosted gateway for local large language models: an application-layer encrypted proxy in front of Ollama and a desktop client that pseudonymises sensitive entities on-device (BERT + regex) before transmission, designed for Spanish clinical text.",
   "creators": [
-    { "name": "Marrero Garcia, Ramses", "orcid": "TODO" },
-    { "name": "Penafiel, Petter Axel", "orcid": "TODO" }
+    { "name": "Marrero Garcia, Ramses"},
+    { "name": "Penafiel, Petter Axel"},
+    { "name": "Cayuela, Rosalia"}
   ],
   "license": "MIT",
   "version": "1.2.0",
