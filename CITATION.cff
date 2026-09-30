@@ -12,8 +12,8 @@ authors:
     given-names: Ramses
   - family-names: Penafiel
     given-names: Petter Axel
-  - family-names: Rosalia
-    given-names: Cayuela
+  - family-names: Cayuela
+    given-names: Rosalia
 keywords:
   - ollama
   - encryption
