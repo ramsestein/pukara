@@ -27,7 +27,7 @@ authors:
     orcid: "https://orcid.org/0009-0001-6878-2008"
     affiliation: ["Hospital Clínic de Barcelona", "Universidad de Barcelona"]
 repository-code: "https://github.com/ramsestein/pukara"
-doi: "doi.org/10.5281/zenodo.23050229"
+doi: "10.5281/zenodo.23050229"
 keywords:
   - ollama
   - encryption
