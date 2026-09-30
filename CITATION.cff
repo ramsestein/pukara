@@ -7,13 +7,27 @@ abstract: >-
   v2: AES-256-GCM + HKDF-SHA256) and a desktop client that pseudonymises
   sensitive entities on-device (BERT + regex) before sending data to the
   server.
+type: software
 authors:
-  - family-names: Marrero Garcia
-    given-names: Ramses
-  - family-names: Penafiel
-    given-names: Petter Axel
-  - family-names: Cayuela
-    given-names: Rosalia
+  - family-names: "Marrero García"
+    given-names: "Ramsés"
+    orcid: "https://orcid.org/0000-0003-3054-1345"
+    affiliation: "Hospital Clínic de Barcelona"
+    email: "rmarrero@clinic.cat"
+  - family-names: "Peñafiel"
+    given-names: "Petter Axcell"
+    orcid: "https://orcid.org/0009-0006-9917-9726"
+    affiliation: "Hospital Clínic de Barcelona"
+  - family-names: "Cayuela"
+    given-names: "Rosalía"
+    orcid: "https://orcid.org/0009-0008-4546-6927"
+    affiliation: ["Hospital Clínic de Barcelona", "Universidad de Barcelona"]
+  - family-names: "Brunet"
+    given-names: "Clara"
+    orcid: "https://orcid.org/0009-0001-6878-2008"
+    affiliation: ["Hospital Clínic de Barcelona", "Universidad de Barcelona"]
+repository-code: "https://github.com/ramsestein/pukara"
+doi: "10.5281/zenodo.XXXXXXX"
 keywords:
   - ollama
   - encryption
@@ -25,4 +39,4 @@ keywords:
   - clinical-nlp
 license: MIT
 version: 1.2.0
-date-released: 2026-09-19
+date-released: 2026-09-30

@@ -1,4 +1,4 @@
-# Release procedure — v0.2.0 (prepared, NOT executed)
+# Release procedure — v1.2.0 (prepared, NOT executed)
 
 This procedure is documented but **not run** in this pass. Run it only after the
 third evaluation pass is merged and `docs/dev/handoff.md` leaves no open
@@ -26,12 +26,12 @@ pip-audit -r requirements.txt
 
 ```bash
 git checkout main
-git tag -a v0.2.0 -m "Pukara v0.2.0"
-git push origin v0.2.0
+git tag -a v1.2.0 -m "Pukara v1.2.0"
+git push origin v1.2.0
 ```
 
 `pyproject.toml` reads the version from `src.__version__` (single source of
-truth), currently `0.2.0`.
+truth), currently `1.2.0`.
 
 ## 3. Zenodo
 
@@ -39,8 +39,8 @@ truth), currently `0.2.0`.
   integration).
 - `CITATION.cff` (root) and `.zenodo.json` (root) carry `TODO` markers for
   ORCIDs and the SoftwareX DOI; fill them before archiving.
-- Draft a new version in Zenodo for tag `v0.2.0`, verify the metadata (authors,
-  MIT license, version 0.2.0) and publish. The DOI is then added to the README
+- Draft a new version in Zenodo for tag `v1.2.0`, verify the metadata (authors,
+  MIT license, version 1.2.0) and publish. The DOI is then added to the README
   metadata table (currently "Pending").
 
 ## 4. Final checklist (fourth pass, not executed)
@@ -57,8 +57,8 @@ truth), currently `0.2.0`.
 - [ ] Run `make eval` on a clean tree and commit any regenerated artifacts; the
       frozen test JSONs are not touched by `make eval`.
 - [ ] CI green on GitHub across the full matrix (3.9–3.12 + Docker build).
-- [ ] Tag `v0.2.0` and publish the GitHub release.
-- [ ] Archive in Zenodo (new version for `v0.2.0`), obtain the DOI.
+- [ ] Tag `v1.2.0` and publish the GitHub release.
+- [ ] Archive in Zenodo (new version for `v1.2.0`), obtain the DOI.
 - [ ] Add the DOI to `README.md`, `CITATION.cff` and `.zenodo.json`.
 - [ ] From here on, `eval/results/` is frozen (no regeneration).
 
