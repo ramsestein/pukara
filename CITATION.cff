@@ -21,11 +21,11 @@ authors:
   - family-names: "Cayuela"
     given-names: "Rosalía"
     orcid: "https://orcid.org/0009-0008-4546-6927"
-    affiliation: ["Hospital Clínic de Barcelona", "Universidad de Barcelona"]
+    affiliation: "Hospital Clínic de Barcelona, Universitat de Barcelona"
   - family-names: "Brunet"
     given-names: "Clara"
     orcid: "https://orcid.org/0009-0001-6878-2008"
-    affiliation: ["Hospital Clínic de Barcelona", "Universidad de Barcelona"]
+    affiliation: "Hospital Clínic de Barcelona, Universitat de Barcelona"
 repository-code: "https://github.com/ramsestein/pukara"
 doi: "10.5281/zenodo.23050229"
 keywords:
