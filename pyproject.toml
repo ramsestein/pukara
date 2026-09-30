@@ -12,6 +12,7 @@ license = { text = "MIT" }
 authors = [
     { name = "Ramsés Marrero Garcia" },
     { name = "Petter Axel Peñafiel" },
+    { name = "Rosalía Cayuela" }
 ]
 keywords = ["ollama", "encryption", "anonymization", "privacy", "llm", "spanish", "clinical"]
 classifiers = [
