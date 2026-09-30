@@ -6,7 +6,7 @@ import os
 import sys
 import urllib.request
 
-from . import secure
+from . import privacy, secure
 
 
 def _read_env(key):
@@ -95,11 +95,24 @@ def main():
         "messages": [{"role": "user", "content": args.prompt}],
         "stream": False,
     }
+    try:
+        from .anonymizer import get_anonymizer
+
+        anon = get_anonymizer()
+        anon.reset()
+        privacy.anonymize_body(anon, body)
+    except privacy.UnsupportedPayloadError as exc:
+        sys.stderr.write(f"Privacy protection blocked request: {exc}\n")
+        sys.exit(1)
+    except Exception as exc:  # noqa: BLE001
+        sys.stderr.write(f"Privacy protection blocked request: anonymizer unavailable ({exc})\n")
+        sys.exit(1)
     result = secure_request(secret, base, "POST", "/v1/chat/completions", body, config)
     if result.get("status") != 200:
         print(f"[FAIL] Server responded {result.get('status')}: {result.get('body')}")
         sys.exit(1)
     content = result["body"]["choices"][0]["message"]["content"]
+    content = anon.deanonymize(content)
     print("[OK] Response:")
     print(content)
 

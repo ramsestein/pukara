@@ -42,6 +42,10 @@ The authoritative description is
   the client. Whether the transmitted text is anonymous for the recipient
   depends on the residual re-identification risk (see the threat model and
   `docs/metrics.md`).
+- Inference requests are blocked if the client anonymizer cannot load or the
+  request contains unsupported text or media. The supplied Compose deployment
+  requires a password and IP allowlist, enables strict startup checks and
+  limits each client IP to 60 requests per minute by default.
 
 ## Dependency security
 

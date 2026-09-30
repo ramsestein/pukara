@@ -45,13 +45,13 @@ OLLAMA_MODEL = os.environ.get("OLLAMA_MODEL", "")
 BERT_MODEL = os.environ.get("BERT_MODEL", "")
 ALLOWED_IPS = os.environ.get("ALLOWED_IPS", "")
 TRUSTED_PROXIES = os.environ.get("TRUSTED_PROXIES", "")
-RATE_LIMIT = int(os.environ.get("RATE_LIMIT", "0") or 0)  # req/min per IP; 0 = off
+RATE_LIMIT = int(os.environ.get("RATE_LIMIT", "60") or 0)  # req/min per IP; 0 = off
 AUDIT_LOG = os.environ.get("AUDIT_LOG", "")
 ALLOW_MANAGEMENT = os.environ.get("ALLOW_MANAGEMENT", "0") == "1"
 MAX_BODY_BYTES = int(os.environ.get("MAX_BODY_BYTES", str(10 * 1024 * 1024)) or 0)
 UPSTREAM_TIMEOUT = float(os.environ.get("UPSTREAM_TIMEOUT", "600") or 600)
 MAX_RATE_IPS = int(os.environ.get("MAX_RATE_IPS", "100000") or 100000)
-STRICT = os.environ.get("STRICT", "0") == "1"
+STRICT = os.environ.get("STRICT", "1") == "1"
 
 # The generic, oracle-free error returned for tag/freshness/replay/credential
 # failures. The real cause is only written to the audit log.
@@ -160,7 +160,7 @@ def _client_ip(handler):
 
 def _ip_allowed(ip):
     if not _ALLOWED_NETS:
-        return True  # no list configured => no restriction
+        return not ALLOWED_IPS  # an invalid nonempty list must never allow all
     try:
         addr = ipaddress.ip_address(ip)
     except ValueError:
@@ -424,8 +424,12 @@ def main():
     warnings = []
     if not ALLOWED_IPS:
         warnings.append("ALLOWED_IPS no está definida: se aceptan todas las IPs")
-    if not AUTH_USER and not AUTH_PASSWORD:
-        warnings.append("AUTH_USER/AUTH_PASSWORD no definidas: credenciales desactivadas")
+    elif not _ALLOWED_NETS:
+        warnings.append("ALLOWED_IPS no contiene ninguna IP/CIDR válida")
+    if not AUTH_USER or not AUTH_PASSWORD:
+        warnings.append("AUTH_USER y AUTH_PASSWORD son obligatorias")
+    if RATE_LIMIT <= 0:
+        warnings.append("RATE_LIMIT desactivado")
     if not OLLAMA_MODEL:
         warnings.append("OLLAMA_MODEL no definida: no se verifica el modelo del cliente")
     if not BERT_MODEL:

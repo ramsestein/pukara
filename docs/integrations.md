@@ -2,7 +2,10 @@
 
 The local Ollama endpoint (`python -m src.local_ollama`) exposes a standard
 Ollama-compatible API on `http://127.0.0.1:11434`, so you can plug other tools
-into Pukara. Every request is anonymized on-device and encrypted in transit.
+into Pukara. Supported inference text is pseudonymised on-device and encrypted
+in transit.
+Inference currently supports text-only chat, generation and embeddings;
+requests with tools, images or audio return `422` before forwarding.
 
 ## VS Code
 

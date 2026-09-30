@@ -3,9 +3,9 @@
 
 Run:  python local_ollama.py
 
-It listens on http://127.0.0.1:11434 (Ollama's default port). Any tool that
-speaks to a local Ollama (VS Code + extensions, Open WebUI, the `ollama` CLI,
-etc.) can use the model hosted on Sliplane as if it were local.
+It listens on http://127.0.0.1:11434 (Ollama's default port). Tools that
+send supported text-only Ollama or OpenAI requests can use the remote model
+through this endpoint.
 """
 import argparse
 import json
@@ -17,7 +17,8 @@ import urllib.parse
 import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-from . import secure
+from . import privacy, secure
+from .anonymizer import get_anonymizer
 
 DEFAULT_REMOTE = "https://ollama-sliplane.sliplane.app"
 STREAMING_PATHS = {"/api/chat", "/api/generate", "/v1/chat/completions", "/v1/completions"}
@@ -116,45 +117,18 @@ def _ensure_chat_capability(obj):
     return obj
 
 
-# ── Anonymization layer (optional: local BERT + regex) ───────────────────
-try:
-    from .anonymizer import get_anonymizer
-except Exception:  # noqa: BLE001
-    get_anonymizer = None
-
+# ── Client-side pseudonymisation ──────────────────────────────────────────
 _ANON_LOCK = threading.Lock()
 
 
 def _anonymize_body(anon, body):
-    """Anonymize the text fields of a request (in-place)."""
-    if not isinstance(body, dict):
-        return body
-    messages = body.get("messages")
-    if isinstance(messages, list):
-        for m in messages:
-            if isinstance(m, dict) and isinstance(m.get("content"), str):
-                m["content"] = anon.anonymize(m["content"])
-    if isinstance(body.get("prompt"), str):
-        body["prompt"] = anon.anonymize(body["prompt"])
-    return body
+    """Pseudonymise supported text fields or reject the request."""
+    return privacy.anonymize_body(anon, body)
 
 
 def _deanonymize_body(anon, body):
-    """Restore the placeholders of a response."""
-    if not isinstance(body, dict):
-        return body
-    message = body.get("message")
-    if isinstance(message, dict) and isinstance(message.get("content"), str):
-        message["content"] = anon.deanonymize(message["content"])
-    choices = body.get("choices")
-    if isinstance(choices, list):
-        for c in choices:
-            if isinstance(c, dict) and isinstance(c.get("message"), dict) \
-                    and isinstance(c["message"].get("content"), str):
-                c["message"]["content"] = anon.deanonymize(c["message"]["content"])
-    if isinstance(body.get("response"), str):
-        body["response"] = anon.deanonymize(body["response"])
-    return body
+    """Restore placeholders in supported response fields."""
+    return privacy.deanonymize_body(anon, body)
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -298,18 +272,30 @@ class Handler(BaseHTTPRequestHandler):
             req_body = dict(req_body)
             req_body["stream"] = False
 
-        use_anon = self.path in STREAMING_PATHS and get_anonymizer is not None
-        anon = None
-        if use_anon:
+        if self.path in privacy.INFERENCE_PATHS:
             _ANON_LOCK.acquire()
             try:
-                anon = get_anonymizer()
-                if anon is not None:
+                try:
+                    anon = get_anonymizer()
+                    if anon is None:
+                        raise RuntimeError("anonymizer unavailable")
                     anon.reset()
                     _anonymize_body(anon, req_body)
+                except privacy.UnsupportedPayloadError as exc:
+                    self._send(422, {
+                        "error": f"Request blocked by local privacy protection: {exc}",
+                        "code": "privacy_unsupported_payload",
+                    })
+                    return
+                except Exception as exc:  # noqa: BLE001
+                    sys.stderr.write(f"[local] anonymizer unavailable: {exc}\n")
+                    self._send(503, {
+                        "error": "Request blocked by local privacy protection: anonymizer unavailable",
+                        "code": "privacy_anonymizer_unavailable",
+                    })
+                    return
                 status, body = forward("POST", self.path, req_body)
-                if anon is not None:
-                    body = _deanonymize_body(anon, body)
+                body = _deanonymize_body(anon, body)
             finally:
                 _ANON_LOCK.release()
         else:

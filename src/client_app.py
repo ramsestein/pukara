@@ -21,7 +21,7 @@ import urllib.request
 from pathlib import Path
 from tkinter import messagebox, scrolledtext, ttk
 
-from . import PROJECT_ROOT, secure
+from . import PROJECT_ROOT, privacy, secure
 
 ROOT = PROJECT_ROOT
 DEFAULT_MODEL_REPO = "BSC-NLP4BIA/bsc-bio-ehr-es-carmen-anon"
@@ -132,7 +132,16 @@ def ensure_model(models_dir=None):
     if not present:
         try:
             from huggingface_hub import snapshot_download  # noqa: E402
-            kwargs = {"repo_id": repo, "local_dir": str(model_dir)}
+            kwargs = {
+                "repo_id": repo,
+                "local_dir": str(model_dir),
+                # Match the pinned pytorch_model.bin hash in .env.example.
+                "allow_patterns": [
+                    "config.json", "merges.txt", "pytorch_model.bin",
+                    "special_tokens_map.json", "tokenizer.json",
+                    "tokenizer_config.json", "vocab.json",
+                ],
+            }
             revision = model_revision()
             if revision:
                 kwargs["revision"] = revision
@@ -440,7 +449,6 @@ class ClientApp:
             self.start_btn.config(state="normal")
             return
         self.status("✓ Server responded 200")
-        self._start_ollama()
         self.status("Loading anonymizer (BERT)...")
         self.run_bg(
             lambda: _load_anonymizer(),
@@ -455,7 +463,7 @@ class ClientApp:
 
     def _start_ollama(self):
         if self.ollama_proc is not None:
-            return
+            return True
         try:
             self.log_file = open(ROOT / "client_ollama.log", "ab")
             self.ollama_proc = subprocess.Popen(
@@ -463,16 +471,26 @@ class ClientApp:
                 cwd=str(ROOT), stdout=self.log_file, stderr=self.log_file,
             )
             self.status(f"✓ Local Ollama started on port {self.vars['LOCAL_PORT'].get()}")
+            return True
         except Exception as exc:
             self.status(f"✗ Could not start local Ollama: {exc}")
+            return False
 
     def _on_anon_loaded(self, result):
         anon, error = result
         self.anon = anon
         if anon is None:
-            self.status(f"⚠ Anonymizer unavailable: {error}")
-        else:
-            self.status("✓ Anonymizer ready")
+            self.status(f"✗ Privacy protection blocked requests: anonymizer unavailable ({error})")
+            messagebox.showerror(
+                "Privacy protection",
+                f"Requests are blocked because the local anonymizer is unavailable.\n\nDetails: {error}",
+            )
+            self.start_btn.config(state="normal")
+            return
+        self.status("✓ Anonymizer ready")
+        if not self._start_ollama():
+            self.start_btn.config(state="normal")
+            return
         self.status("✓ Client ready. Type your message.")
         # Start stays disabled: we are already running.
         self.started = True
@@ -526,6 +544,8 @@ class ClientApp:
         self.run_bg(self._do_chat, done=self._on_chat_done, error=self._on_chat_error)
 
     def _do_chat(self):
+        if self.anon is None:
+            raise RuntimeError("Privacy protection blocked request: local anonymizer unavailable")
         url = self.vars["REMOTE_URL"].get().strip().rstrip("/")
         secret = self.vars["ENCRYPTION_SECRET"].get().strip()
         model = self.vars["OLLAMA_MODEL"].get().strip()
@@ -538,12 +558,11 @@ class ClientApp:
             config["password"] = password
 
         messages = [dict(m) for m in self.history]
-        if self.anon is not None:
-            for m in messages:
-                if isinstance(m.get("content"), str):
-                    m["content"] = self.anon.anonymize(m["content"])
-
         body = {"model": model, "messages": messages, "stream": False}
+        try:
+            privacy.anonymize_body(self.anon, body)
+        except privacy.UnsupportedPayloadError as exc:
+            raise RuntimeError(f"Privacy protection blocked request: {exc}") from exc
         result = secure_request(
             secret, url, "POST", "/v1/chat/completions", body, config
         )
@@ -558,7 +577,7 @@ class ClientApp:
         else:
             content = f"[Error {status}] {json.dumps(resp_body, ensure_ascii=False)[:300]}"
 
-        if self.anon is not None and status == 200:
+        if status == 200:
             content = self.anon.deanonymize(content)
         return content
 
