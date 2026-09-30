@@ -8,13 +8,12 @@ abstract: >-
   sensitive entities on-device (BERT + regex) before sending data to the
   server.
 authors:
-  # ORCID markers pending author confirmation.
   - family-names: Marrero Garcia
     given-names: Ramses
-    # orcid: TODO
   - family-names: Penafiel
     given-names: Petter Axel
-    # orcid: TODO
+  - family-names: Rosalia
+    given-names: Cayuela
 keywords:
   - ollama
   - encryption
