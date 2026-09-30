@@ -29,7 +29,7 @@ resilient stronghold around your model.
 | Dependencies | `cryptography`, `numpy` (core); `torch`, `transformers`, `huggingface_hub` (client) |
 | Repository | https://github.com/ramsestein/pukara |
 | CI | [GitHub Actions](.github/workflows/ci.yml) |
-| DOI | Pending (Zenodo release `v1.2.0`) |
+| DOI | https://doi.org/10.5281/zenodo.23049966 (Zenodo release `v1.2.0`) |
 
 ## Abstract
 
