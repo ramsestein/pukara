@@ -7,7 +7,7 @@
 [![CI](https://github.com/ramsestein/pukara/actions/workflows/ci.yml/badge.svg)](https://github.com/ramsestein/pukara/actions/workflows/ci.yml)
 [![Python](https://img.shields.io/badge/Python-3.9%2B-blue)]()
 [![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
-[![Version](https://img.shields.io/badge/Version-0.2.0-orange)]()
+[![Version](https://img.shields.io/badge/Version-1.2.0-orange)]()
 
 A privacy-first, self-hosted gateway for local large language models
 ([Ollama](https://ollama.com)). Pukara runs a Dockerized Ollama server behind an
@@ -23,7 +23,7 @@ resilient stronghold around your model.
 | Field | Value |
 |---|---|
 | Name | Pukara |
-| Version | 0.2.0 |
+| Version | 1.2.0 |
 | License | [MIT](LICENSE) |
 | Language | Python 3.9+ |
 | Dependencies | `cryptography`, `numpy` (core); `torch`, `transformers`, `huggingface_hub` (client) |
