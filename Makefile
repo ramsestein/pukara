@@ -1,8 +1,9 @@
 # Pukara evaluation pipeline.
 # `make eval` regenera docs/metrics.md desde eval/results/*.json.
-# MEDDOCAN test (Pukara) está congelado: meddocan.json NO se re-ejecuta (ver
-# docs/dev/handoff.md). Las ejecuciones sobre test (Presidio standalone y
-# sobre-redacción) son de una sola vez: `make eval-test-frozen`.
+# MEDDOCAN test (Pukara) está congelado: meddocan.json NO se re-ejecuta salvo
+# re-ejecución documentada (la última, v1.2.1: eval/PROTOCOL.md §8). Las
+# ejecuciones sobre test (Presidio standalone y sobre-redacción) son de una sola
+# vez: `make eval-test-frozen`. Entorno de referencia: requirements-client.lock.
 
 SEED ?= 42
 BOOTSTRAP ?= 1000

@@ -1,0 +1,29 @@
+{
+  "script": "eval/promptbench.py",
+  "generated": "2026-09-20T04:51:19.173774Z",
+  "code_revision": "65dcf50d121c11027ca987e2022edc2f3254568f",
+  "dirty": false,
+  "mode": "combined",
+  "seed": 42,
+  "n_prompts": 5000,
+  "span_strict": {
+    "precision": 0.6424,
+    "recall": 0.7191,
+    "f1": 0.6786
+  },
+  "span_relaxed": {
+    "precision": 0.8526,
+    "recall": 0.9544,
+    "f1": 0.9006
+  },
+  "coreference": {
+    "consistent_entities": 17950,
+    "total_entities_with_detected_mentions": 18614,
+    "consistency_rate": 0.9643
+  },
+  "collisions": 0,
+  "limitations": [
+    "Synthetic and templated: optimistic upper bound.",
+    "Potential circularity if templates and regex rules share authors."
+  ]
+}

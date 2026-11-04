@@ -1,0 +1,100 @@
+{
+  "script": "eval/utility.py",
+  "generated": "2026-09-22T05:31:12.715585Z",
+  "code_revision": "345ef3ab218be70bbac0f037dfe57d239f4dfc9a",
+  "dirty": true,
+  "roundtrip": {
+    "texts": 57,
+    "failures": 0,
+    "rate": 1.0,
+    "examples": []
+  },
+  "robustness": {
+    "uppercase": {
+      "restored": 54,
+      "total": 54,
+      "rate": 1.0
+    },
+    "bold_markers": {
+      "restored": 54,
+      "total": 54,
+      "rate": 1.0
+    },
+    "lost_brackets": {
+      "restored": 0,
+      "total": 54,
+      "rate": 0.0
+    },
+    "single_bracket": {
+      "restored": 0,
+      "total": 54,
+      "rate": 0.0
+    },
+    "space_inner": {
+      "restored": 54,
+      "total": 54,
+      "rate": 1.0
+    },
+    "label_translated": {
+      "restored": 54,
+      "total": 54,
+      "rate": 1.0
+    },
+    "plural_suffix": {
+      "restored": 54,
+      "total": 54,
+      "rate": 1.0
+    },
+    "genitive_suffix": {
+      "restored": 54,
+      "total": 54,
+      "rate": 1.0
+    },
+    "split_by_newline": {
+      "restored": 54,
+      "total": 54,
+      "rate": 1.0
+    }
+  },
+  "spurious_restorations": {
+    "natural": {
+      "samples": 300,
+      "altered": 0,
+      "rate": 0.0,
+      "rate_ci95": [
+        0.0,
+        0.0
+      ],
+      "altered_chars": 0,
+      "total_chars": 29996,
+      "char_rate": 0.0,
+      "char_rate_ci95": [
+        0.0,
+        0.0
+      ],
+      "examples": []
+    },
+    "adversarial": {
+      "samples": 300,
+      "altered": 0,
+      "rate": 0.0,
+      "rate_ci95": [
+        0.0,
+        0.0
+      ],
+      "altered_chars": 0,
+      "total_chars": 12370,
+      "char_rate": 0.0,
+      "char_rate_ci95": [
+        0.0,
+        0.0
+      ],
+      "examples": []
+    }
+  },
+  "notes": [
+    "Round-trip failures are bugs, not metrics; round-trip is exact in strict mode (the only mode).",
+    "Perturbations mimic deterministic LLM edits to placeholders; the rate is the share of texts where ALL original entities are recovered.",
+    "spurious_restorations: share of placeholder-free texts altered by deanonymize, by sample composition (natural code/JSON/SQL/CSV vs adversarial tag-like tokens), plus share of altered characters."
+  ]
+}

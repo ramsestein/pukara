@@ -4,7 +4,43 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project
 adheres to [Semantic Versioning](https://semver.org/).
 
-## [1.2.0] - unreleased
+## [1.2.1] - unreleased
+
+### Fixed
+
+- **BERT window coverage (evaluation and production).** Results produced in
+  September 2026 came from an environment in which BERT only processed the
+  first 512-token window of each text. `Anonymizer.check_bert_coverage` now
+  blocks (fail-closed) any text not fully covered by the BERT windows. All
+  results in `eval/results` were regenerated with the same frozen detector
+  configuration; the old files are archived in `eval/results/archive_2026-09/`
+  with the evidence.
+- **Restoration in a single pass.** Restored text is never reparsed, so a
+  later placeholder can no longer consume a restored character as a plural
+  suffix (`[NOMBRE_1][LUGAR_1]` → "Anasan", previously "Anaan").
+- **Escape map per request.** Escape markers are unique across all messages of
+  a request and the map is no longer overwritten or cleared by later messages
+  (ordinary text such as "Hospital 12" / "hora 14" could be restored in the
+  wrong place).
+- **OpenAI streaming.** Streaming chat requests now receive
+  `chat.completion.chunk` events with `delta` (previously OpenAI clients read
+  an empty reply). The response is still delivered in a single chunk.
+- **Empty tool lists.** `tools: []` / `null` (sent by the official Ollama
+  Python client) is accepted; non-empty tool definitions are still rejected.
+
+### Added
+
+- `requirements-client.lock` (reference environment) and an `environment`
+  block with library versions in every results JSON.
+- Complementary evaluation metrics in `eval/meddocan.py`: strict per-annotation
+  coverage and round-trip without an LLM.
+
+### Changed
+
+- Author metadata (CITATION.cff, .zenodo.json, pyproject.toml): names without
+  accents, second surnames, Universitat de Barcelona affiliations.
+
+## [1.2.0] - 2026-09-30
 
 ### Breaking
 

@@ -269,3 +269,21 @@ depender de la etiqueta**, con el mismo evaluador que Pukara.
   (`eval/over_redaction.py`): % de tokens que no son PHI en gold y quedan dentro
   de un span predicho. No bloquea el release. Si se retoma, verificar antes que
   ninguno de los dos corpus formó parte del entrenamiento del modelo CARMEN.
+
+## 8. Re-ejecución v1.2.1 (noviembre de 2026)
+
+`test` se volvió a ejecutar **con la misma configuración congelada** (regex,
+umbral, lista blanca y mapeo sin cambios; `tests/test_frozen_detector.py`) para
+corregir un defecto **de entorno**: en las ejecuciones de septiembre BERT solo
+procesó la primera ventana de 512 tokens de cada documento. Causa, evidencia y
+resultados archivados en `eval/results/archive_2026-09/README.md`.
+
+- Todas las cifras reportables proceden de esta re-ejecución (entorno en
+  `requirements-client.lock`; versiones registradas en `environment` de cada
+  JSON).
+- Se añaden dos métricas **complementarias** que no sustituyen a las de la §3:
+  cobertura estricta por anotación (`strict_coverage`: unión de intervalos
+  realmente retirados, en offsets originales, sin exigir bordes ni etiqueta) y
+  round-trip sin LLM sobre test (`roundtrip_no_llm`).
+- CARMEN-I y el coste (latencia en el hardware de referencia) quedan pendientes
+  de re-ejecutar fuera de este entorno.
