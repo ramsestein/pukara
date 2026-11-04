@@ -1,74 +1,84 @@
 {
   "script": "eval/diagnose.py",
-  "generated": "2026-09-21T08:59:18.806867Z",
-  "code_revision": "0bf88ed0a104adf56066703ae6db333476340b28",
+  "generated": "2026-11-04T07:36:59.663771Z",
+  "code_revision": "6392cf9ec876b65ee9166a22eaeef453fba4c220",
+  "environment": {
+    "python": "3.13.18",
+    "platform": "Linux-6.18.44-fc-v233-x86_64-with-glibc2.39",
+    "torch": "2.15.0",
+    "transformers": "5.22.1",
+    "tokenizers": "0.23.3",
+    "numpy": "2.4.6",
+    "presidio-analyzer": "2.2.365",
+    "spacy": "3.8.18"
+  },
   "dirty": false,
   "documents": 250,
   "confusion": {
     "EMAIL": {
       "EMAIL": 238,
-      "NAME": 1,
-      "URL": 1,
-      "(FN)": 1
+      "NAME": 2,
+      "PHONE": 1
     },
     "SEX": {
       "SEX": 189,
-      "(FN)": 162,
+      "(FN)": 161,
       "HOSPITAL": 85,
       "ID": 9,
-      "ORGANIZATION": 10
+      "ORGANIZATION": 10,
+      "FAMILY": 1
     },
     "AGE": {
-      "AGE": 486,
-      "(FN)": 28,
+      "AGE": 488,
+      "(FN)": 25,
       "FAMILY": 6,
+      "DATE": 1,
       "ID": 1
     },
     "ID": {
-      "ID": 712,
+      "ID": 711,
       "PHONE": 10,
-      "(FN)": 13,
-      "NAME": 1,
+      "(FN)": 14,
       "FAMILY": 1,
       "SEX": 7,
+      "LOCATION": 1,
       "PROFESSION": 1
     },
     "NAME": {
-      "NAME": 757,
+      "NAME": 759,
       "PHONE": 116,
       "EMAIL": 2,
-      "ID": 44,
-      "FAMILY": 49,
-      "SEX": 4,
-      "LOCATION": 15,
-      "(FN)": 8,
+      "ID": 48,
+      "FAMILY": 50,
+      "SEX": 5,
       "HOSPITAL": 2,
+      "LOCATION": 14,
+      "(FN)": 1,
       "DATE": 3
     },
     "DATE": {
-      "DATE": 723,
-      "(FN)": 1
+      "DATE": 724
     },
     "LOCATION": {
-      "LOCATION": 1036,
-      "PHONE": 154,
-      "ID": 18,
-      "(FN)": 456,
-      "NAME": 63,
-      "AGE": 2,
-      "HOSPITAL": 35,
+      "LOCATION": 1385,
+      "PHONE": 155,
+      "ID": 51,
+      "(FN)": 153,
+      "HOSPITAL": 18,
       "DATE": 3,
+      "NAME": 2,
       "OTHER": 1
     },
     "FAMILY": {
       "FAMILY": 76,
-      "(FN)": 16
+      "(FN)": 15,
+      "SEX": 1
     },
     "HOSPITAL": {
-      "HOSPITAL": 119,
-      "NAME": 16,
-      "(FN)": 6,
-      "DATE": 1
+      "HOSPITAL": 138,
+      "DATE": 2,
+      "(FN)": 1,
+      "LOCATION": 1
     },
     "PHONE": {
       "PHONE": 30,
@@ -79,13 +89,13 @@
       "(FN)": 1
     },
     "ORGANIZATION": {
-      "NAME": 5,
-      "(FN)": 39,
-      "HOSPITAL": 16,
+      "HOSPITAL": 30,
+      "ORGANIZATION": 4,
+      "(FN)": 24,
       "OTHER": 1,
       "LOCATION": 6,
-      "ORGANIZATION": 3,
-      "ID": 1,
+      "ID": 4,
+      "NAME": 2,
       "PROFESSION": 1
     },
     "OTHER": {
@@ -96,58 +106,16 @@
   },
   "name_false_negatives": [
     {
-      "doc": "S0211-69952009000500014-1",
-      "text": "Francisco Rivera Hernández",
-      "start": 2608,
-      "end": 2634
-    },
-    {
-      "doc": "S0211-69952012000700031-1",
-      "text": "Gerardo Armando Latino",
-      "start": 2223,
-      "end": 2245
-    },
-    {
-      "doc": "S0211-69952014000400019-1",
-      "text": "Pablo Justo-Ávila",
-      "start": 2624,
-      "end": 2641
-    },
-    {
-      "doc": "S0212-16112011000300031-1",
-      "text": "Maria José López Otero",
-      "start": 3411,
-      "end": 3433
-    },
-    {
-      "doc": "S0212-71992005001000009-1",
-      "text": "rancisco Javier Candel",
-      "start": 3028,
-      "end": 3050
-    },
-    {
-      "doc": "S0365-66912005001200010-1",
-      "text": "Paola Maldonado Cid",
-      "start": 2708,
-      "end": 2727
-    },
-    {
       "doc": "S0365-66912006000200012-1",
       "text": "Elisa",
       "start": 9,
       "end": 14
-    },
-    {
-      "doc": "S0365-66912007000800012-1",
-      "text": "Maite",
-      "start": 2192,
-      "end": 2197
     }
   ],
   "over_redaction": {
-    "fp_tokens_combined": 1642,
+    "fp_tokens_combined": 1462,
     "non_gold_tokens": 99268,
-    "rate": 0.0165
+    "rate": 0.0147
   },
   "rule_fp_tokens": {
     "date": 29,
