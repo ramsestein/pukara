@@ -1,8 +1,17 @@
 {
   "script": "eval/promptbench_heldout.py",
-  "generated": "2026-09-20T04:40:10.305671Z",
-  "code_revision": "65dcf50d121c11027ca987e2022edc2f3254568f",
-  "dirty": false,
+  "generated": "2026-11-04T07:33:19.050150Z",
+  "code_revision": "ccf1cf1c9b54f4176165489debc93f2e7036413a",
+  "environment": {
+    "python": "3.13.18",
+    "platform": "Linux-6.18.44-fc-v233-x86_64-with-glibc2.39",
+    "torch": "2.15.0",
+    "transformers": "5.22.1",
+    "tokenizers": "0.23.3",
+    "numpy": "2.4.6",
+    "presidio-analyzer": "2.2.365",
+    "spacy": "3.8.18"
+  },
   "mode": "combined",
   "seed": 2024,
   "n_prompts": 2500,
