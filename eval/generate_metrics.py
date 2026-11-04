@@ -19,6 +19,28 @@ def load(name: str):
     return json.loads(path.read_text(encoding="utf-8"))
 
 
+def _config_choice_note(abl: dict) -> str:
+    """Describe the dev configuration choice against the protocol rule."""
+    rel = {k: v["span_relaxed"]["f1"] for k, v in abl.items() if v}
+    best = max(rel, key=rel.get)
+    note = ("The frozen configuration is `combined` (BERT + regex, Presidio off), "
+            "selected with the protocol rule: maximise relaxed F1 on dev, wide "
+            "leakage as tie-breaker.")
+    if best != "combined":
+        b, c = abl[best], abl["combined"]
+        note += (
+            f" On the corrected v1.2.1 dev run, `{best}` has a marginally higher "
+            f"relaxed F1 ({_pct(b['span_relaxed']['f1'])}, CI "
+            f"{_pct(b['span_relaxed']['f1_ci95'][0])}–{_pct(b['span_relaxed']['f1_ci95'][1])}) "
+            f"than `combined` ({_pct(c['span_relaxed']['f1'])}, CI "
+            f"{_pct(c['span_relaxed']['f1_ci95'][0])}–{_pct(c['span_relaxed']['f1_ci95'][1])}); "
+            f"the intervals overlap, and `{best}` leaks in "
+            f"{_pct(b['leakage']['wide']['rate'])} of documents versus "
+            f"{_pct(c['leakage']['wide']['rate'])}. The configuration was not re-selected."
+        )
+    return note
+
+
 def _pct(x):
     return f"{100 * x:.1f}%"
 
@@ -211,12 +233,40 @@ def main() -> int:
                 f"{_pct(d['phi_neutralization']['rate'])} | "
                 f"{_pct(d['leakage']['wide']['rate'])} |"
             )
-        lines += [
-            "",
-            "The frozen configuration is `combined` (BERT + regex, Presidio off): "
-            "it maximizes relaxed F1 on dev with wide leakage as tie-breaker.",
-            "",
-        ]
+        lines += ["", _config_choice_note(abl), ""]
+        sc = meddocan.get("strict_coverage")
+        if sc:
+            a, d = sc["all"], sc["direct"]
+            lines += [
+                "### Strict coverage (complementary)",
+                "",
+                "Union of intervals actually removed, in original offsets, without "
+                "requiring boundary or label match; `full` = every annotated "
+                "character removed.",
+                "",
+                "| Annotations | Full | Partial | Missed | Total |",
+                "|---|---|---|---|---|",
+                f"| All | {a['full']} ({_pct(a['full'] / a['total'])}) | "
+                f"{a['partial']} ({_pct(a['partial'] / a['total'])}) | "
+                f"{a['missed']} ({_pct(a['missed'] / a['total'])}) | {a['total']} |",
+                f"| Direct (NAME/ID/PHONE/EMAIL) | {d['full']} ({_pct(d['full'] / d['total'])}) | "
+                f"{d['partial']} ({_pct(d['partial'] / d['total'])}) | "
+                f"{d['missed']} ({_pct(d['missed'] / d['total'])}) | {d['total']} |",
+                "",
+                f"Alphanumeric fragments of direct identifiers remain in "
+                f"{sc['direct_alnum_residual_annotations']} annotations and "
+                f"{sc['direct_alnum_residual_docs']}/{meddocan['documents']} documents. "
+                "These are leftover fragments, not fully visible identities nor a "
+                "re-identification probability.",
+                "",
+            ]
+        rt = meddocan.get("roundtrip_no_llm")
+        if rt:
+            lines += [
+                f"Round-trip without an LLM (pseudonymise → restore) on MEDDOCAN test: "
+                f"{rt['exact']}/{rt['total']} documents exact.",
+                "",
+            ]
     else:
         lines += ["No MEDDOCAN results yet.\n"]
 
