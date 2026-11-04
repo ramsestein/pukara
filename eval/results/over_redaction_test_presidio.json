@@ -1,7 +1,17 @@
 {
   "script": "eval/over_redaction.py",
-  "generated": "2026-09-22T03:28:20.434279Z",
-  "code_revision": "c9202924d5a3de4df02f65d1578618839e7d6606",
+  "generated": "2026-11-04T07:06:53.339404Z",
+  "code_revision": "afc6feab76d2437aef7c6946d724ea196df4f8e2",
+  "environment": {
+    "python": "3.13.18",
+    "platform": "Linux-6.18.44-fc-v233-x86_64-with-glibc2.39",
+    "torch": "2.15.0",
+    "transformers": "5.22.1",
+    "tokenizers": "0.23.3",
+    "numpy": "2.4.6",
+    "presidio-analyzer": "2.2.365",
+    "spacy": "3.8.18"
+  },
   "dirty": false,
   "mode": "presidio",
   "split": "test",
