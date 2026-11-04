@@ -1,8 +1,17 @@
 {
   "script": "eval/promptbench.py",
-  "generated": "2026-09-20T04:51:19.173774Z",
-  "code_revision": "65dcf50d121c11027ca987e2022edc2f3254568f",
-  "dirty": false,
+  "generated": "2026-11-04T07:28:29.713160Z",
+  "code_revision": "1149098f024225458678232e5d9a8264bd735e64",
+  "environment": {
+    "python": "3.13.18",
+    "platform": "Linux-6.18.44-fc-v233-x86_64-with-glibc2.39",
+    "torch": "2.15.0",
+    "transformers": "5.22.1",
+    "tokenizers": "0.23.3",
+    "numpy": "2.4.6",
+    "presidio-analyzer": "2.2.365",
+    "spacy": "3.8.18"
+  },
   "mode": "combined",
   "seed": 42,
   "n_prompts": 5000,
