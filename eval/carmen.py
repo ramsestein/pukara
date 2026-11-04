@@ -168,6 +168,7 @@ def main() -> int:
         "script": "eval/carmen.py",
         "generated": datetime.datetime.utcnow().isoformat() + "Z",
         "code_revision": git_revision(),
+        "environment": common.environment(),
         "dirty": common.dirty(),
         "mode": args.mode,
         "presidio_meta": presidio_meta,

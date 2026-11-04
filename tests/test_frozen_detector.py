@@ -6,7 +6,7 @@ Compara el hash de las funciones de detección y de los patrones regex del
 toca la detección (regex, umbral, lista blanca, BERT, dedup), este test falla y
 obliga a re-congelar explícitamente.
 
-Los cambios de restauración/escape (`_restore_placeholder`, `_escape_*`,
+Los cambios de restauración/escape (`_restore_all`, `_escape_*`,
 `_unescape_*`, `anonymize`, `deanonymize`, `reset`) quedan fuera del hash.
 """
 import ast

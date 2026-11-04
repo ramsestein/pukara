@@ -47,6 +47,30 @@ def load_documents(splits: list[str], corpus: Path):
     return docs
 
 
+def _strict_summary(rows: list, per_doc_direct_alnum: list) -> dict:
+    """Resumen de la cobertura estricta (todas las anotaciones y directas)."""
+    def _counts(sel):
+        out = {"full": 0, "partial": 0, "missed": 0}
+        for r in sel:
+            out[r["status"]] += 1
+        out["total"] = len(sel)
+        return out
+
+    direct = [r for r in rows if r["label"] in common.CRITICAL_TAGS]
+    return {
+        "definition": "union of intervals actually removed (original offsets), "
+                      "no boundary/label match required; full = every annotated "
+                      "character removed",
+        "all": _counts(rows),
+        "direct": _counts(direct),
+        "direct_alnum_residual_annotations": sum(r["alnum_residual"] for r in direct),
+        "direct_alnum_residual_docs": sum(per_doc_direct_alnum),
+        "per_doc_direct_alnum_residual": per_doc_direct_alnum,
+        "note": "alnum residuals are leftover fragments, not fully visible "
+                "identities nor a re-identification probability",
+    }
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="MEDDOCAN intrinsic evaluation")
     parser.add_argument("--corpus", default="data/meddocan/corpus")
@@ -110,9 +134,27 @@ def main() -> int:
     strict_tp = strict_fp = strict_fn = 0
     relaxed_tp = relaxed_fp = relaxed_fn = 0
     per_class_counts = {}  # label -> [tp, fp, fn]
+    # Complementarias (v1.2.1): cobertura estricta y round-trip sin LLM.
+    strict_rows = []
+    per_doc_direct_alnum = []
+    roundtrip_exact = 0
+    roundtrip_total = 0
+    production_path = args.mode in ("regex", "combined")
 
     for _name, text, gold in docs:
-        pred = predictor.detect(text)
+        if production_path:
+            anon_text, removed, preds_esc, escaped = common.anonymize_with_removed(
+                predictor._anon, text)
+            pred = preds_esc if escaped == text else predictor.detect(text)
+            roundtrip_total += 1
+            roundtrip_exact += predictor._anon.deanonymize(anon_text) == text
+        else:
+            pred = predictor.detect(text)
+            removed = [(p["start"], p["end"]) for p in pred]
+        rows = common.strict_coverage(text, gold, removed)
+        strict_rows.extend(rows)
+        per_doc_direct_alnum.append(int(any(
+            r["alnum_residual"] and r["label"] in common.CRITICAL_TAGS for r in rows)))
         # Word level (binary PHI over whitespace tokens).
         tokens = [(m.start(), m.end()) for m in __import__("re").finditer(r"\S+", text)]
         gold_tok = {i for i, (s, e) in enumerate(tokens)
@@ -216,6 +258,7 @@ def main() -> int:
         "script": "eval/meddocan.py",
         "generated": datetime.datetime.utcnow().isoformat() + "Z",
         "code_revision": git_revision(),
+        "environment": common.environment(),
         "dirty": common.dirty(),
         "mode": args.mode,
         "presidio": (args.mode == "combined" and args.presidio),
@@ -252,6 +295,10 @@ def main() -> int:
             "f1_ci95": [round(x, 4) for x in relaxed_ci],
         },
         "per_class": per_class,
+        "strict_coverage": _strict_summary(strict_rows, per_doc_direct_alnum),
+        "roundtrip_no_llm": (
+            {"exact": roundtrip_exact, "total": roundtrip_total}
+            if production_path else None),
         "phi_neutralization": {
             "covered_spans": covered_spans,
             "total_spans": total_gold_spans,

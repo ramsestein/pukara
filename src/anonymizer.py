@@ -169,45 +169,44 @@ def _ph_parts(ph: str) -> tuple:
     return tag, num
 
 
-def _ph_num(ph: str) -> int:
-    num = _ph_parts(ph)[1]
-    return int(num) if num.isdigit() else 0
+def _restore_all(text: str, ph_to_text: dict, original_tokens=None) -> str:
+    """Restaura todos los placeholders en una sola pasada.
 
+    Política strict: exige ambos corchetes `[TAG_n]`; tolera mayúsculas,
+    `**…**`, espacios internos, etiqueta traducida al inglés, sufijos
+    `s`/`'s` y salto de línea interno; nunca restaura un token de un único
+    elemento que ya aparecía en el prompt original. El número no puede ir
+    seguido de otro dígito ([NOMBRE_1] no se cuela en [NOMBRE_10]).
 
-def _restore_placeholder(text: str, ph: str, orig: str,
-                         original_tokens=None) -> str:
-    """Restaura un placeholder y sus perturbaciones toleradas.
-
-    Exige ambos corchetes `[TAG_n]`. Tolera mayúsculas/minúsculas, `**…**`,
-    espacios internos, etiqueta traducida al inglés, sufijos `s`/`'s` y salto
-    de línea interno. No recupera `single_bracket` ni `lost_brackets`. Nunca
-    restaura un token que ya aparecía en el prompt original
-    (`original_tokens`, en minúscula).
-
-    Insensible a mayúsculas. El número no puede ir seguido de otro dígito
-    (evita que [NOMBRE_1] se cuele dentro de [NOMBRE_10]).
+    Se hace en una sola pasada, sin volver a leer el texto ya insertado: una
+    sustitución nunca consume caracteres restaurados por otra (p. ej.
+    `[NOMBRE_1][LUGAR_1]` → «Ana» + «san» no pierde la «s»).
     """
-    tag, num = _ph_parts(ph)
-    aliases = _TAG_ALIASES.get(tag.upper(), (tag,))
-    tag_alt = "(?:" + "|".join(re.escape(a) for a in aliases) + ")"
-    core = tag_alt + r"[\s_]*" + re.escape(num) + r"(?!\d)"
-    bracket_alt = r"\[\s*" + core + r"\s*\](?-i:'s|s)?"
-    pat = re.compile(r"\*{0,2}(?:" + bracket_alt + r")\*{0,2}", re.IGNORECASE)
-
-    if not original_tokens:
-        return pat.sub(orig, text)
-
-    token_spans = [(m.start(), m.end()) for m in re.finditer(r"\S+", text)]
-    ph_lower = ph.lower()
+    if not ph_to_text:
+        return text
+    alias_to_tag = {}
+    for ph in ph_to_text:
+        tag = _ph_parts(ph)[0]
+        for alias in _TAG_ALIASES.get(tag.upper(), (tag,)):
+            alias_to_tag[alias.upper()] = tag
+    alts = sorted(alias_to_tag, key=len, reverse=True)
+    tag_alt = "(" + "|".join(re.escape(a) for a in alts) + ")"
+    pat = re.compile(
+        r"\*{0,2}\[\s*" + tag_alt + r"[\s_]*(\d+)(?!\d)\s*\](?-i:'s|s)?\*{0,2}",
+        re.IGNORECASE,
+    )
+    token_spans = (
+        [(m.start(), m.end()) for m in re.finditer(r"\S+", text)]
+        if original_tokens else []
+    )
 
     def _repl(m: re.Match) -> str:
-        # El placeholder exacto (con corchetes, salvo `**` y mayúsculas) es un
-        # placeholder generado: se restaura siempre.
-        if m.group(0).strip("*").lower() == ph_lower:
+        ph = f"[{alias_to_tag[m.group(1).upper()]}_{m.group(2)}]"
+        orig = ph_to_text.get(ph)
+        if orig is None:
+            return m.group(0)
+        if not original_tokens or m.group(0).strip("*").lower() == ph.lower():
             return orig
-        # La salvaguarda del original solo aplica a coincidencias de un único
-        # token (un placeholder perturbado con espacios es multi-token y debe
-        # restaurarse).
         s, e = m.start(), m.end()
         overlapping = [(ts, te) for ts, te in token_spans if ts < e and s < te]
         if len(overlapping) == 1:
@@ -247,15 +246,17 @@ _LITERAL_PLACEHOLDER = re.compile(
 )
 
 
-def _escape_literal_placeholders(text: str) -> tuple:
+def _escape_literal_placeholders(text: str, start: int = 0) -> tuple:
     """Protege los placeholders literales de la entrada frente a la restauración.
 
-    Devuelve `(texto_con_marcadores, {marcador: literal})`.
+    Devuelve `(texto_con_marcadores, {marcador: literal})`. `start` es el
+    primer índice de marcador libre, para que los marcadores sean únicos en
+    todos los mensajes de una misma petición.
     """
     escapes: dict = {}
 
     def _sub(m):
-        marker = f"{_ESC_OPEN}{len(escapes)}{_ESC_CLOSE}"
+        marker = f"{_ESC_OPEN}{start + len(escapes)}{_ESC_CLOSE}"
         escapes[marker] = m.group(0)
         return marker
 
@@ -570,6 +571,38 @@ class Anonymizer:
         self.original_tokens = set()  # tokens del prompt original (salvaguarda)
 
     # ── Detección BERT ────────────────────────────────────────────────────
+    def check_bert_coverage(self, text: str) -> None:
+        """Fail closed if the BERT windows do not cover the whole text.
+
+        `_bert_detect` splits long texts into overlapping windows
+        (`return_overflowing_tokens` + `STRIDE`). In some environments only the
+        first window was returned, so text after ~512 tokens was never seen by
+        BERT. This check tokenizes with the same parameters and raises if any
+        non-whitespace character falls outside the windows. It does not change
+        detection; it only blocks the request.
+        """
+        tokenizer = getattr(self, "tokenizer", None)
+        if tokenizer is None or not text.strip():
+            return
+        enc = tokenizer(
+            text,
+            return_overflowing_tokens=True,
+            stride=self.STRIDE,
+            truncation=True,
+            max_length=tokenizer.model_max_length,
+            return_offsets_mapping=True,
+        )
+        offsets = enc["offset_mapping"]
+        if offsets and isinstance(offsets[0], tuple):
+            offsets = [offsets]
+        covered = max((e for window in offsets for _s, e in window), default=0)
+        if covered < len(text.rstrip()):
+            raise RuntimeError(
+                f"BERT windows cover {covered}/{len(text.rstrip())} characters; "
+                f"{len(offsets)} window(s) returned. Check the transformers/"
+                "tokenizers versions (see requirements-client.lock)."
+            )
+
     def _bert_detect(self, text: str) -> list[dict]:
         import numpy as np
         import torch
@@ -875,8 +908,16 @@ class Anonymizer:
     def anonymize(self, text: str) -> str:
         # Tokens del prompt original (minúscula) para la salvaguarda de no
         # restaurar un token que el usuario ya escribió.
-        self.original_tokens = {t.lower() for t in re.findall(r"\S+", text)}
-        text, self.escapes = _escape_literal_placeholders(text)
+        # Se acumulan durante toda la petición (varios mensajes); `reset()`
+        # los borra al empezar la siguiente.
+        if not hasattr(self, "original_tokens"):
+            self.original_tokens = set()
+        if not hasattr(self, "escapes"):
+            self.escapes = {}
+        self.original_tokens |= {t.lower() for t in re.findall(r"\S+", text)}
+        text, new_escapes = _escape_literal_placeholders(text, start=len(self.escapes))
+        self.escapes.update(new_escapes)
+        self.check_bert_coverage(text)
         for e in sorted(self.detect(text), key=lambda x: x["start"], reverse=True):
             orig = e["text"]
             ph = self.text_to_ph.get(orig)
@@ -891,12 +932,9 @@ class Anonymizer:
         return text
 
     def deanonymize(self, text: str) -> str:
-        # Placeholders con número mayor primero, para no romper [NOMBRE_10]
-        # al restaurar [NOMBRE_1] (además la regex exige que el número no vaya
-        # seguido de más alfanuméricos).
+        # Una sola pasada: el texto restaurado no se vuelve a interpretar.
         original_tokens = getattr(self, "original_tokens", set())
-        for ph, orig in sorted(self.ph_to_text.items(), key=lambda kv: _ph_num(kv[0]), reverse=True):
-            text = _restore_placeholder(text, ph, orig, original_tokens=original_tokens)
+        text = _restore_all(text, self.ph_to_text, original_tokens=original_tokens)
         escapes = getattr(self, "escapes", {})
         if escapes:
             text = _unescape_literal_placeholders(text, escapes)

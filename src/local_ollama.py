@@ -131,6 +131,35 @@ def _deanonymize_body(anon, body):
     return privacy.deanonymize_body(anon, body)
 
 
+def _openai_stream_events(path, body):
+    """Convert a complete OpenAI response into stream events.
+
+    Chat completions must be sent as `chat.completion.chunk` objects whose
+    text is in `choices[].delta`; otherwise OpenAI clients read an empty
+    reply. Legacy completions keep `choices[].text`, so the body is reused.
+    """
+    if path != "/v1/chat/completions" or not isinstance(body, dict):
+        return [body]
+    base = {k: body[k] for k in ("id", "created", "model", "system_fingerprint") if k in body}
+    base["object"] = "chat.completion.chunk"
+    content_choices, final_choices = [], []
+    for i, choice in enumerate(body.get("choices") or []):
+        if not isinstance(choice, dict):
+            continue
+        message = choice.get("message") or {}
+        index = choice.get("index", i)
+        delta = {"role": message.get("role", "assistant")}
+        if message.get("content") is not None:
+            delta["content"] = message["content"]
+        content_choices.append({"index": index, "delta": delta, "finish_reason": None})
+        final_choices.append({"index": index, "delta": {},
+                              "finish_reason": choice.get("finish_reason", "stop")})
+    events = [dict(base, choices=content_choices), dict(base, choices=final_choices)]
+    if "usage" in body:
+        events.append(dict(base, choices=[], usage=body["usage"]))
+    return events
+
+
 class Handler(BaseHTTPRequestHandler):
     def log_message(self, fmt, *args):
         sys.stderr.write("[local] %s\n" % (fmt % args))
@@ -301,9 +330,12 @@ class Handler(BaseHTTPRequestHandler):
         else:
             status, body = forward("POST", self.path, req_body)
 
-        if want_stream and self.path.startswith("/v1/"):
-            # SSE for the OpenAI-compatible endpoint
-            payload = "data: " + json.dumps(body) + "\n\ndata: [DONE]\n\n"
+        if want_stream and self.path.startswith("/v1/") and status < 400:
+            # SSE for the OpenAI-compatible endpoint. The full response is
+            # delivered in a single event (no incremental streaming).
+            events = _openai_stream_events(self.path, body)
+            payload = "".join("data: " + json.dumps(e) + "\n\n" for e in events)
+            payload += "data: [DONE]\n\n"
             self._send(status, payload, "text/event-stream")
             return
         if want_stream and isinstance(body, dict):

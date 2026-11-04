@@ -1,0 +1,18 @@
+# Restricciones exactas del entorno con el que se generaron los resultados de
+# eval/results (v1.2.1). Usar como constraints:
+#
+#   pip install -r requirements-client.txt -c requirements-client.lock
+#
+# Motivo: una ejecución de septiembre de 2026 se hizo en un entorno (versiones
+# no registradas) en el que BERT solo procesaba la primera ventana de 512
+# tokens de cada texto. `Anonymizer.check_bert_coverage` bloquea ahora ese
+# caso, y cada JSON de resultados registra las versiones en `environment`.
+# Python 3.13.
+torch==2.15.0
+transformers==5.22.1
+tokenizers==0.23.3
+huggingface_hub==2.4.0
+safetensors==0.8.0
+numpy==2.5.4
+regex==2026.9.29
+cryptography==50.0.2

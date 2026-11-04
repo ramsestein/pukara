@@ -125,6 +125,8 @@ class Predictor:
         if self.mode == "presidio_es":
             from src import presidio
             return presidio.detect_es(text)
+        if self.mode in ("bert", "combined"):
+            self._anon.check_bert_coverage(text)
         if self.mode == "bert":
             return self._anon._bert_detect(text)
         return self._anon.detect(text)
@@ -254,6 +256,78 @@ def span_coverage(gold: list[dict], pred: list[dict]) -> tuple:
     return covered, len(gold)
 
 
+def strict_coverage(text: str, gold: list[dict], removed: list[tuple]) -> list[dict]:
+    """Cobertura estricta por anotación (métrica complementaria, v1.2.1).
+
+    `removed` son los intervalos realmente retirados del texto (offsets del
+    texto original), sin exigir coincidencia de bordes ni de etiqueta. Cada
+    anotación queda como `full` (todos sus caracteres retirados), `partial` o
+    `missed`; `alnum_residual` indica si queda algún carácter alfanumérico
+    (los restos de espacios o puntuación no cuentan como fuga).
+    """
+    covered = bytearray(len(text))
+    for s, e in removed:
+        for i in range(max(0, s), min(len(text), e)):
+            covered[i] = 1
+    out = []
+    for g in gold:
+        residual = [i for i in range(g["start"], g["end"]) if not covered[i]]
+        n = g["end"] - g["start"]
+        status = "full" if not residual else ("missed" if len(residual) == n else "partial")
+        out.append({"label": g["label"], "status": status,
+                    "alnum_residual": any(text[i].isalnum() for i in residual)})
+    return out
+
+
+def anonymize_with_removed(anon, text: str):
+    """Seudonimiza `text` como en producción y devuelve también lo retirado.
+
+    Devuelve `(anonimizado, intervalos_retirados, predicciones_en_texto_escapado,
+    texto_escapado)`. Los intervalos están en offsets del texto original e
+    incluyen los literales escapados. La detección se ejecuta una sola vez.
+    """
+    import re as _re
+
+    from src import anonymizer as _an
+
+    anon.reset()
+    escaped, _ = _an._escape_literal_placeholders(text)
+    esc_spans = [(m.start(), m.end()) for m in _an._LITERAL_PLACEHOLDER.finditer(text)]
+    # Mapa posición en texto escapado -> posición en texto original.
+    to_orig, i = [], 0
+    for s, e in esc_spans:
+        while i < s:
+            to_orig.append(i)
+            i += 1
+        marker = _re.match(_re.escape(_an._ESC_OPEN) + r"\d+" + _re.escape(_an._ESC_CLOSE),
+                           escaped[len(to_orig):])
+        to_orig.extend([s] * marker.end())
+        i = e
+    while i < len(text):
+        to_orig.append(i)
+        i += 1
+    to_orig.append(len(text))
+    anon.check_bert_coverage(escaped)
+    preds = anon.detect(escaped)
+    removed = list(esc_spans)
+    for p in preds:
+        s = to_orig[p["start"]]
+        e = to_orig[p["end"] - 1] + 1 if p["end"] > p["start"] else s
+        removed.append((s, e))
+    had_own = "detect" in vars(anon)
+    own = vars(anon).get("detect")
+    anon.detect = lambda _t: preds
+    try:
+        anon.reset()
+        out = anon.anonymize(text)
+    finally:
+        if had_own:
+            anon.detect = own
+        else:
+            del anon.detect
+    return out, removed, preds, escaped
+
+
 # ── Bootstrap ──────────────────────────────────────────────────────────────
 def bootstrap_ci(values: list, n: int = 1000, seed: int = 42) -> tuple:
     """95% percentile bootstrap CI of the mean of `values`.
@@ -373,6 +447,26 @@ def dirty() -> bool:
         return bool(out.strip())
     except Exception:  # noqa: BLE001
         return True
+
+
+def environment() -> dict:
+    """Versiones de Python y de las librerías que afectan a la detección.
+
+    Se registran en cada JSON de resultados: una ejecución de 2026-09 quedó
+    afectada por un entorno en el que BERT solo procesaba la primera ventana
+    de 512 tokens, y las versiones no se habían guardado.
+    """
+    import platform
+    from importlib import metadata
+
+    env = {"python": platform.python_version(), "platform": platform.platform()}
+    for pkg in ("torch", "transformers", "tokenizers", "numpy",
+                "presidio-analyzer", "spacy"):
+        try:
+            env[pkg] = metadata.version(pkg)
+        except metadata.PackageNotFoundError:
+            env[pkg] = None
+    return env
 
 
 def presidio_meta(sample_texts: list, mode: str = "presidio") -> dict:

@@ -306,6 +306,7 @@ def main() -> int:
         "script": "eval/utility.py",
         "generated": datetime.datetime.utcnow().isoformat() + "Z",
         "code_revision": _git(),
+        "environment": common.environment(),
         "dirty": common.dirty(),
         "roundtrip": {
             "texts": len(texts),

@@ -219,6 +219,7 @@ def main() -> int:
         "script": "eval/promptbench.py",
         "generated": datetime.datetime.utcnow().isoformat() + "Z",
         "code_revision": _git(),
+        "environment": common.environment(),
         "mode": args.mode,
         "seed": args.seed,
         "n_prompts": len(prompts),

@@ -162,6 +162,7 @@ def main() -> int:
         "script": "eval/over_redaction.py",
         "generated": datetime.datetime.utcnow().isoformat() + "Z",
         "code_revision": git_revision(),
+        "environment": common.environment(),
         "dirty": common.dirty(),
         "mode": args.mode,
         "split": args.split,

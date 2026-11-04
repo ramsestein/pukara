@@ -95,6 +95,7 @@ def main() -> int:
         "script": "eval/cost.py",
         "generated": datetime.datetime.utcnow().isoformat() + "Z",
         "code_revision": _git(),
+        "environment": common.environment(),
         "mode": args.mode,
         "hardware": {
             "cpu": platform.processor() or platform.machine(),

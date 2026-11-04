@@ -140,6 +140,7 @@ def main() -> int:
         "script": "eval/diagnose.py",
         "generated": datetime.datetime.utcnow().isoformat() + "Z",
         "code_revision": common_git(),
+        "environment": common.environment(),
         "dirty": common.dirty(),
         "documents": len(docs),
         "confusion": conf,

@@ -10,10 +10,10 @@ readme = "README.md"
 requires-python = ">=3.9"
 license = { text = "MIT" }
 authors = [
-    { name = "Ramsés Marrero García" },
-    { name = "Petter Axcell Peñafiel" },
-    { name = "Rosalía Cayuela" },
-    { name = "Clara Brunet" }
+    { name = "Ramses Marrero Garcia" },
+    { name = "Petter Axcell Peñafiel Macias" },
+    { name = "Rosalia Cayuela" },
+    { name = "Clara Brunet Villarejo" }
 ]
 keywords = ["ollama", "encryption", "anonymization", "privacy", "llm", "spanish", "clinical"]
 classifiers = [

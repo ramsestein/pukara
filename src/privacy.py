@@ -71,6 +71,12 @@ def anonymize_body(anon, body):
     if not isinstance(body, dict):
         raise UnsupportedPayloadError("request body must be a JSON object")
 
+    # Some clients (e.g. the official Ollama Python library) always send an
+    # empty tool list. It carries no text, so it is dropped instead of
+    # rejecting the request; non-empty tool definitions are still rejected.
+    if "tools" in body and body["tools"] in (None, []):
+        del body["tools"]
+
     messages = body.get("messages")
     if messages is not None:
         if not isinstance(messages, list):

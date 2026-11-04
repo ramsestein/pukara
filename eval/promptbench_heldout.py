@@ -160,6 +160,7 @@ def main() -> int:
         "script": "eval/promptbench_heldout.py",
         "generated": datetime.datetime.utcnow().isoformat() + "Z",
         "code_revision": _git(),
+        "environment": common.environment(),
         "mode": "combined",
         "seed": 2024,
         "n_prompts": len(prompts),
