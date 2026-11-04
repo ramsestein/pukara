@@ -1,8 +1,18 @@
 {
   "script": "eval/utility.py",
-  "generated": "2026-09-22T05:31:12.715585Z",
-  "code_revision": "345ef3ab218be70bbac0f037dfe57d239f4dfc9a",
-  "dirty": true,
+  "generated": "2026-11-04T07:16:26.376311Z",
+  "code_revision": "567430da178144ebe1db3c2a8fc5b2a9ba82f9f9",
+  "environment": {
+    "python": "3.13.18",
+    "platform": "Linux-6.18.44-fc-v233-x86_64-with-glibc2.39",
+    "torch": "2.15.0",
+    "transformers": "5.22.1",
+    "tokenizers": "0.23.3",
+    "numpy": "2.4.6",
+    "presidio-analyzer": "2.2.365",
+    "spacy": "3.8.18"
+  },
+  "dirty": false,
   "roundtrip": {
     "texts": 57,
     "failures": 0,
