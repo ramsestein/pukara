@@ -7,7 +7,7 @@
 [![CI](https://github.com/ramsestein/pukara/actions/workflows/ci.yml/badge.svg)](https://github.com/ramsestein/pukara/actions/workflows/ci.yml)
 [![Python](https://img.shields.io/badge/Python-3.9%2B-blue)]()
 [![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
-[![Version](https://img.shields.io/badge/Version-1.2.0-orange)]()
+[![Version](https://img.shields.io/badge/Version-1.2.1-orange)]()
 
 A privacy-first, self-hosted gateway for local large language models
 ([Ollama](https://ollama.com)). Pukara runs a Dockerized Ollama server behind an
@@ -23,13 +23,13 @@ resilient stronghold around your model.
 | Field | Value |
 |---|---|
 | Name | Pukara |
-| Version | 1.2.0 |
+| Version | 1.2.1 |
 | License | [MIT](LICENSE) |
 | Language | Python 3.9+ |
 | Dependencies | `cryptography`, `numpy` (core); `torch`, `transformers`, `huggingface_hub` (client) |
 | Repository | https://github.com/ramsestein/pukara |
 | CI | [GitHub Actions](.github/workflows/ci.yml) |
-| DOI | https://doi.org/10.5281/zenodo.23050229 (Zenodo release `v1.2.0`) |
+| DOI | https://doi.org/10.5281/zenodo.23050229 (Zenodo release `v1.2.0`; `v1.2.1` receives its own DOI on release) |
 
 ## Abstract
 
@@ -49,9 +49,12 @@ model-agnostic (swap `BERT_MODEL` for another language).
 - Local models are increasingly self-hosted, but the transport and the payload
   are rarely protected end-to-end.
 - Clinical and personal Spanish text has few ready-to-use pseudonymisation tools.
-- Pukara packages encryption + on-device NER pseudonymisation + a turnkey
-  Ollama-compatible endpoint, so existing tools (VS Code, Codex, Claude Code)
-  work without changes.
+- Pukara packages encryption + on-device NER pseudonymisation + a local
+  endpoint that implements a text-only subset of the Ollama and OpenAI APIs:
+  tools that send supported text-only requests can connect by pointing to it.
+  Requests with content Pukara cannot protect (tool definitions, images,
+  audio, unsupported fields) are rejected with HTTP 422 instead of being sent
+  unprotected; streaming requests receive the full response in one chunk.
 
 ## Software architecture
 
@@ -116,32 +119,46 @@ same evaluator (full numbers and the per-class table are in `docs/metrics.md`):
 
 | Metric (MEDDOCAN test) | Pukara | Presidio (OOTB) | Presidio (ES) |
 |---|---|---|---|
-| Word F1 | 84.4 % | 59.1 % | 59.6 % |
-| Span relaxed F1 | 83.6 % | 59.1 % | 57.2 % |
-| PHI neutralization | 88.6 % | 56.2 % | 62.3 % |
-| Leakage direct | 7.2 % | 100.0 % | 99.2 % |
-| Leakage wide | 11.2 % | 100.0 % | 99.2 % |
-| Over-redaction (non-PHI tokens altered) | 1.8 % | 2.9 % | 4.9 % |
+| Word F1 | 88.5 % | 59.1 % | 59.6 % |
+| Span relaxed F1 | 85.7 % | 59.1 % | 57.2 % |
+| PHI neutralization | 93.5 % | 56.2 % | 62.3 % |
+| Leakage direct | 1.6 % | 100.0 % | 99.2 % |
+| Leakage wide | 5.2 % | 100.0 % | 99.2 % |
+| Over-redaction (non-PHI tokens altered) | 1.6 % | 2.9 % | 4.9 % |
 
 Over-redaction is the domain-agnostic metric that measures how much non-PHI
 text the detector rewrites; see `docs/metrics.md` for its bootstrap CI and the
-per-component breakdown. CARMEN-I is kept only as a secondary in-distribution
-upper bound (the model was fine-tuned on it).
+per-component breakdown. Leakage counts documents with an identifier that has
+no overlapping replacement; under a strict criterion (every annotated
+character removed), 80.7 % of direct identifiers are fully removed, 19.1 %
+partially, and alphanumeric fragments of direct identifiers remain in 219/250
+documents (see `docs/metrics.md`).
+
+These figures come from the v1.2.1 re-run. Earlier (v1.2.0) results were
+produced in an environment where BERT only processed the first 512-token
+window of each document; they are archived with the evidence in
+[`eval/results/archive_2026-09/`](eval/results/archive_2026-09/README.md).
+
+CARMEN-I is not reported in v1.2.1: the model was fine-tuned on it, and the
+corpus requires credentialed access (PhysioNet). Researchers with access can
+run `make eval-carmen` with the corpus under `data/carmen`.
 
 ## Limitations
 
 - **No forward secrecy.** The protocol uses a pre-shared key: whoever obtains
   `ENCRYPTION_SECRET` can decrypt recorded traffic.
 - **Detector recall is < 1.** Missed direct identifiers are transmitted in the
-  clear; measured document-level leakage on MEDDOCAN test is 7.2 % (direct,
-  CI 4.4–10.4 %) / 11.2 % (wide, CI 7.2–15.2 %) — see `docs/metrics.md`.
+  clear; measured document-level leakage on MEDDOCAN test is 1.6 % (direct,
+  CI 0.4–3.2 %) / 5.2 % (wide, CI 2.8–8.0 %), and partial fragments of direct
+  identifiers remain in most documents — see `docs/metrics.md`.
 - **Residual leakage** is a document-level mean with a bootstrap CI; the point
   estimate alone understates the per-document variance (see the CI in
   `docs/metrics.md`).
-- **Over-redaction.** The detector rewrites 1.8 % of non-PHI tokens on test
-  (CI 1.8–2.0 %), mostly BERT fragments and `name` rules firing on title-case
+- **Over-redaction.** The detector rewrites 1.6 % of non-PHI tokens on test
+  (CI 1.5–1.7 %), mostly BERT fragments and `name` rules firing on title-case
   clinical headers — see `docs/dev/eval-diagnosis.md`.
-- **Restoration policy.** Round-trip is exact (57/57). Restoration of an
+- **Restoration policy.** Round-trip without an LLM is exact on the evaluated
+  samples (57/57 controlled texts; 250/250 MEDDOCAN test documents). Restoration of an
   LLM-edited placeholder requires both brackets (`strict`); single/lost
   brackets are not recovered and are reported as honest failures.
   Placeholder-free text is never altered (0 %, even on adversarial tag-like
@@ -150,9 +167,8 @@ upper bound (the model was fine-tuned on it).
   clinical-domain-specific, so a clinical-concept retention metric would bias
   the evaluation to that domain; the domain-agnostic over-redaction metric is
   used instead.
-- **Out-of-distribution drop.** The BERT model is fine-tuned on CARMEN-I; on
-  MEDDOCAN (a different clinical corpus) the neutralization is 88.6 %, lower
-  than the in-distribution CARMEN-I figure in `docs/metrics.md`.
+- **Out-of-distribution evaluation.** The BERT model is fine-tuned on
+  CARMEN-I; MEDDOCAN is a different clinical corpus (neutralization 93.5 %).
 - **Corpus mismatch.** MEDDOCAN consists of structured clinical cases with a
   header block; results may not transfer to discharge letters or user prompts.
 - **Traffic analysis is not mitigated** (sizes and timings are visible).

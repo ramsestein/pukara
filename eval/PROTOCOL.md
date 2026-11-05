@@ -285,5 +285,8 @@ resultados archivados en `eval/results/archive_2026-09/README.md`.
   cobertura estricta por anotación (`strict_coverage`: unión de intervalos
   realmente retirados, en offsets originales, sin exigir bordes ni etiqueta) y
   round-trip sin LLM sobre test (`roundtrip_no_llm`).
-- CARMEN-I y el coste (latencia en el hardware de referencia) quedan pendientes
-  de re-ejecutar fuera de este entorno.
+- CARMEN-I no se re-ejecutó ni se reporta en v1.2.1 (el modelo se entrenó con
+  CARMEN-I y el corpus requiere acceso acreditado); quien tenga acceso puede
+  ejecutar `make eval-carmen`.
+- El coste (`cost.json`) se volvió a medir; el hardware queda declarado en el
+  propio JSON y difiere del de la v1.2.0.

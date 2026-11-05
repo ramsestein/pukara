@@ -5,7 +5,14 @@ Ollama-compatible API on `http://127.0.0.1:11434`, so you can plug other tools
 into Pukara. Supported inference text is pseudonymised on-device and encrypted
 in transit.
 Inference currently supports text-only chat, generation and embeddings;
-requests with tools, images or audio return `422` before forwarding.
+requests with tool definitions, images, audio or other fields Pukara cannot
+inspect (e.g. `stop`, `response_format`) return `422` before forwarding.
+Streaming requests are accepted, but the response arrives in a single chunk.
+
+> **Agentic tools.** Clients that always send tool definitions (coding agents
+> such as Codex CLI or Claude Code) are rejected with `422` by design: tool
+> schemas are text Pukara does not pseudonymise. The configurations below are
+> kept for text-only use and future support.
 
 ## VS Code
 

@@ -8,18 +8,12 @@
 SEED ?= 42
 BOOTSTRAP ?= 1000
 
-.PHONY: eval eval-full eval-test-frozen eval-regex generate-metrics clean
+.PHONY: eval eval-full eval-carmen eval-test-frozen eval-regex generate-metrics clean
 
 ## Pipeline reproducible (no re-ejecuta MEDDOCAN test de Pukara).
 eval: eval-full generate-metrics
 
 eval-full:
-	python -m eval.carmen --corpus data/carmen --mode combined \
-		--out eval/results/carmen_pukara.json --bootstrap $(BOOTSTRAP) --seed $(SEED)
-	python -m eval.carmen --corpus data/carmen --mode presidio \
-		--out eval/results/presidio_carmen.json --bootstrap $(BOOTSTRAP) --seed $(SEED)
-	python -m eval.carmen --corpus data/carmen --mode presidio_es \
-		--out eval/results/presidio_es_carmen.json --bootstrap $(BOOTSTRAP) --seed $(SEED)
 	python -m eval.promptbench --mode combined \
 		--out eval/results/promptbench.json --seed $(SEED)
 	python -m eval.promptbench_heldout
@@ -45,6 +39,16 @@ eval-test-frozen:
 	python -m eval.over_redaction --corpus data/meddocan/corpus --split test \
 		--mode presidio_es --out eval/results/over_redaction_test_presidio_es.json \
 		--bootstrap $(BOOTSTRAP) --seed $(SEED)
+
+## CARMEN-I (opcional): requiere acceso acreditado al corpus (PhysioNet) en
+## data/carmen. No se reporta en v1.2.1 (el modelo se entrenó con CARMEN-I).
+eval-carmen:
+	python -m eval.carmen --corpus data/carmen --mode combined \
+		--out eval/results/carmen_pukara.json --bootstrap $(BOOTSTRAP) --seed $(SEED)
+	python -m eval.carmen --corpus data/carmen --mode presidio \
+		--out eval/results/presidio_carmen.json --bootstrap $(BOOTSTRAP) --seed $(SEED)
+	python -m eval.carmen --corpus data/carmen --mode presidio_es \
+		--out eval/results/presidio_es_carmen.json --bootstrap $(BOOTSTRAP) --seed $(SEED)
 
 ## Ablación regex-only en dev (sin modelo).
 eval-regex:
