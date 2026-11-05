@@ -93,7 +93,7 @@ Round-trip without an LLM (pseudonymise → restore) on MEDDOCAN test: 250/250 d
 
 ## CARMEN-I (secondary, in-distribution upper bound)
 
-No CARMEN-I results yet.
+Not reported in v1.2.1: the BERT model was fine-tuned on CARMEN-I and the corpus requires credentialed access (PhysioNet). Researchers with access can run `make eval-carmen` with the corpus under `data/carmen`.
 
 ## Over-redaction (non-PHI tokens altered)
 
@@ -142,5 +142,14 @@ _Restoration is `strict` only (both brackets required). `natural` = code/JSON/SQ
 
 ## Cost
 
-No cost results yet.
+- Hardware: `Intel(R) Xeon(R) Processor @ 2.10GHz` / `Linux-6.18.44-fc-v236-x86_64-with-glibc2.39`.
+- Anonymization (`combined`, CPU): p50 806.9406 ms, p95 1253.4828 ms over 100 documents.
+- Client peak memory (tracemalloc, Python only): 0.6 MiB (excludes the BERT weights).
+
+| Payload | Encrypt+decrypt p50 | p95 |
+|---|---|---|
+| 64 B | 0.016 ms | 0.0246 ms |
+| 1024 B | 0.0199 ms | 0.0251 ms |
+| 4096 B | 0.0289 ms | 0.0376 ms |
+| 16384 B | 0.0635 ms | 0.0881 ms |
 

@@ -304,7 +304,7 @@ def main() -> int:
             "",
         ]
     else:
-        lines += ["No CARMEN-I results yet.\n"]
+        lines += ["Not reported in v1.2.1: the BERT model was fine-tuned on CARMEN-I and the corpus requires credentialed access (PhysioNet). Researchers with access can run `make eval-carmen` with the corpus under `data/carmen`.\n"]
 
     lines += ["## Over-redaction (non-PHI tokens altered)", ""]
     if over_redaction_test:
