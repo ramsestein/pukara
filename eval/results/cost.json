@@ -1,0 +1,54 @@
+{
+  "script": "eval/cost.py",
+  "generated": "2026-11-05T04:04:49.436684Z",
+  "code_revision": "890d4db6510d8128b216ac347214837ff1810006",
+  "environment": {
+    "python": "3.13.18",
+    "platform": "Linux-6.18.44-fc-v236-x86_64-with-glibc2.39",
+    "torch": "2.15.0",
+    "transformers": "5.22.1",
+    "tokenizers": "0.23.3",
+    "numpy": "2.4.6",
+    "presidio-analyzer": "2.2.365",
+    "spacy": "3.8.18"
+  },
+  "dirty": false,
+  "mode": "combined",
+  "hardware": {
+    "cpu": "Intel(R) Xeon(R) Processor @ 2.10GHz",
+    "logical_cpus": 2,
+    "platform": "Linux-6.18.44-fc-v236-x86_64-with-glibc2.39"
+  },
+  "anonymization_latency_ms": {
+    "documents": 100,
+    "p50": 806.9406,
+    "p95": 1253.4828
+  },
+  "encryption_ms": [
+    {
+      "size_bytes": 64,
+      "p50_ms": 0.016,
+      "p95_ms": 0.0246
+    },
+    {
+      "size_bytes": 1024,
+      "p50_ms": 0.0199,
+      "p95_ms": 0.0251
+    },
+    {
+      "size_bytes": 4096,
+      "p50_ms": 0.0289,
+      "p95_ms": 0.0376
+    },
+    {
+      "size_bytes": 16384,
+      "p50_ms": 0.0635,
+      "p95_ms": 0.0881
+    }
+  ],
+  "client_peak_memory_bytes": 667923,
+  "notes": [
+    "Anonymization latency measured over the full pipeline (BERT + regex when mode=combined) on CPU.",
+    "Peak memory is tracemalloc (Python allocations only); it does not include the ~473 MB of BERT weights held by torch."
+  ]
+}
