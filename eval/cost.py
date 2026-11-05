@@ -7,6 +7,7 @@ from __future__ import annotations
 import argparse
 import datetime
 import json
+import os
 import platform
 import statistics
 import subprocess
@@ -17,6 +18,19 @@ from pathlib import Path
 
 from eval import common
 from src import secure
+
+
+def _cpu_name() -> str:
+    """Nombre legible de la CPU (en Linux, `platform.processor()` suele dar
+    solo la arquitectura)."""
+    try:
+        with open("/proc/cpuinfo", encoding="utf-8") as fh:
+            for line in fh:
+                if line.startswith("model name"):
+                    return line.split(":", 1)[1].strip()
+    except OSError:
+        pass
+    return platform.processor() or platform.machine()
 
 
 def load_sample(corpus: Path, n: int) -> list[str]:
@@ -96,9 +110,11 @@ def main() -> int:
         "generated": datetime.datetime.utcnow().isoformat() + "Z",
         "code_revision": _git(),
         "environment": common.environment(),
+        "dirty": common.dirty(),
         "mode": args.mode,
         "hardware": {
-            "cpu": platform.processor() or platform.machine(),
+            "cpu": _cpu_name(),
+            "logical_cpus": os.cpu_count(),
             "platform": platform.platform(),
         },
         "anonymization_latency_ms": {
